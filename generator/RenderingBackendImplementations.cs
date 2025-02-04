@@ -1,7 +1,6 @@
 ﻿using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using System.Collections.Immutable;
 using System.Threading;
 using Types;
 
@@ -10,8 +9,6 @@ namespace Rendering.Generator
     [Generator(LanguageNames.CSharp)]
     public class RenderingBackendImplementations : IIncrementalGenerator
     {
-        private static readonly SourceBuilder source = new();
-
         void IIncrementalGenerator.Initialize(IncrementalGeneratorInitializationContext context)
         {
             IncrementalValuesProvider<Input?> filter = context.SyntaxProvider.CreateSyntaxProvider(Predicate, Transform);
@@ -29,13 +26,9 @@ namespace Rendering.Generator
             {
                 if (context.SemanticModel.GetDeclaredSymbol(typeDeclaration) is ITypeSymbol typeSymbol)
                 {
-                    ImmutableArray<INamedTypeSymbol> interfaces = typeSymbol.AllInterfaces;
-                    foreach (INamedTypeSymbol interfaceSymbol in interfaces)
+                    if (typeSymbol.HasInterface("Rendering.IRenderingBackend"))
                     {
-                        if (interfaceSymbol.ToDisplayString() == Shared.RenderingBackendInterfaceName)
-                        {
-                            return new Input(typeDeclaration, typeSymbol);
-                        }
+                        return new Input(typeDeclaration, typeSymbol);
                     }
                 }
             }
@@ -53,13 +46,14 @@ namespace Rendering.Generator
 
         public static string Generate(Input input)
         {
-            source.Clear();
+            SourceBuilder source = new();
             source.AppendLine("#pragma warning disable CS0465 //gc isnt even used");
             source.AppendLine("using System;");
             source.AppendLine("using Unmanaged;");
             source.AppendLine("using Worlds;");
             source.AppendLine("using Simulation;");
             source.AppendLine("using Rendering;");
+            source.AppendLine("using Rendering.Systems;");
             source.AppendLine("using Rendering.Functions;");
             source.AppendLine("using System.Runtime.InteropServices;");
             source.AppendLine("using System.ComponentModel;");
@@ -68,7 +62,6 @@ namespace Rendering.Generator
             source.AppendLine($"namespace {input.containingNamespace}");
             source.BeginGroup();
             {
-                source.AppendLine("[EditorBrowsable(EditorBrowsableState.Never)]");
                 if (input.typeSymbol.IsReadOnly)
                 {
                     source.AppendLine($"public unsafe readonly partial struct {input.typeName}");

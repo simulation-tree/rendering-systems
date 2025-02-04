@@ -24,7 +24,6 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\..\data\core\Data.Core.csproj" />
 		<ProjectReference Include="..\..\materials\source\Materials.csproj" />
 		<ProjectReference Include="..\..\meshes\source\Meshes.csproj" />
 		<ProjectReference Include="..\..\shaders\source\Shaders.csproj" />

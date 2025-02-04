@@ -11,7 +11,7 @@ namespace Rendering.Systems.Tests
         public static bool initialized;
         public static readonly System.Collections.Generic.List<Allocation> renderingMachines = new();
 
-        FixedString IRenderingBackend.Label => "test";
+        readonly FixedString IRenderingBackend.Label => "test";
 
         void IRenderingBackend.Initialize()
         {

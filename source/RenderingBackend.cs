@@ -1,5 +1,6 @@
 ﻿using Rendering.Functions;
 using System;
+using System.Diagnostics;
 using Unmanaged;
 
 namespace Rendering
@@ -47,6 +48,8 @@ namespace Rendering
         public static RenderingBackend Create<T>() where T : unmanaged, IRenderingBackend
         {
             T v = default;
+            ThrowIfDefault(v);
+
             Initialize initialize = v.InitializeFunction;
             Finalize finalize = v.FinalizeFunction;
             Create create = v.CreateFunction;
@@ -62,6 +65,15 @@ namespace Rendering
         public static FixedString GetLabel<T>() where T : unmanaged, IRenderingBackend
         {
             return default(T).Label;
+        }
+
+        [Conditional("DEBUG")]
+        private static void ThrowIfDefault<T>(T backend) where T : unmanaged, IRenderingBackend
+        {
+            if (backend.InitializeFunction == default)
+            {
+                throw new InvalidOperationException($"Rendering backend {typeof(T)} doesn't have functions implemented");
+            }
         }
     }
 }

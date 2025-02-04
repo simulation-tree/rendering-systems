@@ -1,4 +1,5 @@
-﻿using Unmanaged;
+﻿using System;
+using Unmanaged;
 
 namespace Rendering.Functions
 {
@@ -8,7 +9,7 @@ namespace Rendering.Functions
     /// Balanced with the <see cref="Finalize"/> function.
     /// </para>
     /// </summary>
-    public unsafe readonly struct Initialize
+    public unsafe readonly struct Initialize : IEquatable<Initialize>
     {
 #if NET
         private readonly delegate* unmanaged<Allocation, void> function;
@@ -29,6 +30,31 @@ namespace Rendering.Functions
         public readonly void Invoke(Allocation renderer)
         {
             function(renderer);
+        }
+
+        public readonly override bool Equals(object? obj)
+        {
+            return obj is Initialize initialize && Equals(initialize);
+        }
+
+        public readonly bool Equals(Initialize other)
+        {
+            return (nint)function == (nint)other.function;
+        }
+
+        public readonly override int GetHashCode()
+        {
+            return ((nint)function).GetHashCode();
+        }
+
+        public static bool operator ==(Initialize left, Initialize right)
+        {
+            return left.Equals(right);
+        }
+
+        public static bool operator !=(Initialize left, Initialize right)
+        {
+            return !(left == right);
         }
     }
 }

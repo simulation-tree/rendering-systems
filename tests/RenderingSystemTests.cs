@@ -1,5 +1,4 @@
-﻿using Data;
-using Materials;
+﻿using Materials;
 using Meshes;
 using Shaders;
 using Simulation.Tests;
@@ -12,7 +11,6 @@ namespace Rendering.Systems.Tests
     {
         static RenderingSystemTests()
         {
-            TypeRegistry.Load<DataTypeBank>();
             TypeRegistry.Load<MeshesTypeBank>();
             TypeRegistry.Load<MaterialsTypeBank>();
             TypeRegistry.Load<RenderingTypeBank>();
@@ -22,7 +20,6 @@ namespace Rendering.Systems.Tests
         protected override Schema CreateSchema()
         {
             Schema schema = base.CreateSchema();
-            schema.Load<DataSchemaBank>();
             schema.Load<MeshesSchemaBank>();
             schema.Load<MaterialsSchemaBank>();
             schema.Load<RenderingSchemaBank>();
