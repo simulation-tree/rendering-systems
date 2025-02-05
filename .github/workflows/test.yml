@@ -90,6 +90,13 @@ jobs:
           repository: game-simulations/types
           token: ${{ secrets.PAT }}
           path: types
+      
+      - name: Checkout `data`
+        uses: actions/checkout@v4.1.2
+        with:
+          repository: game-simulations/data
+          token: ${{ secrets.PAT }}
+          path: data
             
       - name: Setup
         uses: actions/setup-dotnet@v4
