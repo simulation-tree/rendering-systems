@@ -48,10 +48,14 @@ namespace Rendering.Systems
 
         void ISystem.Update(in SystemContainer systemContainer, in World world, in TimeSpan delta)
         {
+            ComponentType destinationType = world.Schema.GetComponent<IsDestination>();
+            ComponentType rendererType = world.Schema.GetComponent<IsRenderer>();
+            ComponentType viewportType = world.Schema.GetComponent<IsViewport>();
+            TagType disabledTag = TagType.Disabled;
             DestroyOldSystems(world);
-            CreateNewSystems(world);
-            FindViewports(world);
-            FindRenderers(world);
+            CreateNewSystems(world, destinationType);
+            FindViewports(world, viewportType, disabledTag);
+            FindRenderers(world, rendererType, disabledTag);
             Render(world);
         }
 
@@ -101,97 +105,110 @@ namespace Rendering.Systems
             availableBackends.Add(label, systemCreator);
         }
 
-        private readonly void CreateNewRenderers(World world)
+        private readonly void CreateNewRenderers(World world, ComponentType destinationType)
         {
             USpan<FixedString> extensionNames = stackalloc FixedString[32];
-            ComponentQuery<IsDestination> query = new(world);
-            foreach (var r in query)
+            foreach (Chunk chunk in world.Chunks)
             {
-                ref IsDestination component = ref r.component1;
-                Destination destination = new Entity(world, r.entity).As<Destination>();
-                if (knownDestinations.Contains(destination))
+                if (chunk.Definition.Contains(destinationType))
                 {
-                    return;
-                }
+                    USpan<uint> entities = chunk.Entities;
+                    USpan<IsDestination> components = chunk.GetComponents<IsDestination>(destinationType);
+                    for (uint i = 0; i < entities.Length; i++)
+                    {
+                        ref IsDestination component = ref components[i];
+                        Destination destination = new Entity(world, entities[i]).As<Destination>();
+                        if (knownDestinations.Contains(destination))
+                        {
+                            return;
+                        }
 
-                FixedString label = component.rendererLabel;
-                if (availableBackends.TryGetValue(label, out RenderingBackend renderingBackend))
-                {
-                    uint extensionNamesLength = destination.CopyExtensionNamesTo(extensionNames);
-                    (Allocation renderer, Allocation instance) = renderingBackend.create.Invoke(renderingBackend.allocation, destination, extensionNames.Slice(0, extensionNamesLength));
-                    RenderingMachine newRenderSystem = new(renderer, renderingBackend);
-                    renderSystems.Add(destination, newRenderSystem);
-                    knownDestinations.Add(destination);
-                    destination.AddComponent(new RendererInstanceInUse(instance));
-                    Trace.WriteLine($"Created render system for destination `{destination}` with label `{label}`");
-                }
-                else
-                {
-                    throw new InvalidOperationException($"Unknown renderer label `{label}`");
+                        FixedString label = component.rendererLabel;
+                        if (availableBackends.TryGetValue(label, out RenderingBackend renderingBackend))
+                        {
+                            uint extensionNamesLength = destination.CopyExtensionNamesTo(extensionNames);
+                            (Allocation renderer, Allocation instance) = renderingBackend.create.Invoke(renderingBackend.allocation, destination, extensionNames.Slice(0, extensionNamesLength));
+                            RenderingMachine newRenderSystem = new(renderer, renderingBackend);
+                            renderSystems.Add(destination, newRenderSystem);
+                            knownDestinations.Add(destination);
+                            destination.AddComponent(new RendererInstanceInUse(instance));
+                            Trace.WriteLine($"Created render system for destination `{destination}` with label `{label}`");
+                        }
+                        else
+                        {
+                            throw new InvalidOperationException($"Unknown renderer label `{label}`");
+                        }
+                    }
                 }
             }
         }
 
-        private readonly void FindRenderers(World world)
+        private readonly void FindRenderers(World world, ComponentType rendererType, TagType disabledTag)
         {
-            ComponentQuery<IsRenderer> query = new(world);
-            query.ExcludeDisabled(true);
-            foreach (var r in query)
+            foreach (Chunk chunk in world.Chunks)
             {
-                uint entity = r.entity;
-                ref IsRenderer component = ref r.component1;
-                rint materialReference = component.materialReference;
-                uint materialEntity = world.GetReference(entity, materialReference);
-                if (!world.ContainsComponent<IsMaterial>(materialEntity))
+                if (chunk.Definition.Contains(rendererType) && !chunk.Definition.Contains(disabledTag))
                 {
-                    continue; //material not yet loaded
-                }
-
-                IsMaterial materialComponent = world.GetComponent<IsMaterial>(materialEntity);
-                uint vertexShaderEntity = world.GetReference(materialEntity, materialComponent.vertexShaderReference);
-                if (!world.ContainsComponent<IsShader>(vertexShaderEntity))
-                {
-                    continue; //vertex shader not yet loaded
-                }
-
-                uint fragmentShaderEntity = world.GetReference(materialEntity, materialComponent.fragmentShaderReference);
-                if (!world.ContainsComponent<IsShader>(fragmentShaderEntity))
-                {
-                    continue; //fragment shader not yet loaded
-                }
-
-                rint meshReference = component.meshReference;
-                uint meshEntity = world.GetReference(entity, meshReference);
-                if (!world.ContainsComponent<IsMesh>(meshEntity))
-                {
-                    continue; //mesh not yet loaded
-                }
-
-                LayerMask renderMask = component.renderMask;
-                for (byte l = 0; l < LayerMask.Capacity; l++)
-                {
-                    if (renderMask.Contains(l))
+                    USpan<uint> entities = chunk.Entities;
+                    USpan<IsRenderer> components = chunk.GetComponents<IsRenderer>(rendererType);
+                    for (uint i = 0; i < entities.Length; i++)
                     {
-                        foreach (Viewport viewport in viewportEntities[l])
+                        ref IsRenderer component = ref components[i];
+                        uint entity = entities[i];
+                        rint materialReference = component.materialReference;
+                        uint materialEntity = world.GetReference(entity, materialReference);
+                        if (!world.ContainsComponent<IsMaterial>(materialEntity))
                         {
-                            Destination destination = viewport.Destination;
-                            if (renderSystems.TryGetValue(destination, out RenderingMachine renderSystem))
+                            continue; //material not yet loaded
+                        }
+
+                        IsMaterial materialComponent = world.GetComponent<IsMaterial>(materialEntity);
+                        uint vertexShaderEntity = world.GetReference(materialEntity, materialComponent.vertexShaderReference);
+                        if (!world.ContainsComponent<IsShader>(vertexShaderEntity))
+                        {
+                            continue; //vertex shader not yet loaded
+                        }
+
+                        uint fragmentShaderEntity = world.GetReference(materialEntity, materialComponent.fragmentShaderReference);
+                        if (!world.ContainsComponent<IsShader>(fragmentShaderEntity))
+                        {
+                            continue; //fragment shader not yet loaded
+                        }
+
+                        rint meshReference = component.meshReference;
+                        uint meshEntity = world.GetReference(entity, meshReference);
+                        if (!world.ContainsComponent<IsMesh>(meshEntity))
+                        {
+                            continue; //mesh not yet loaded
+                        }
+
+                        LayerMask renderMask = component.renderMask;
+                        for (byte l = 0; l < LayerMask.Capacity; l++)
+                        {
+                            if (renderMask.Contains(l))
                             {
-                                if (!renderSystem.renderers.TryGetValue(viewport, out Dictionary<RendererKey, List<uint>> groups))
+                                foreach (Viewport viewport in viewportEntities[l])
                                 {
-                                    groups = new();
-                                    renderSystem.renderers.Add(viewport, groups);
-                                }
+                                    Destination destination = viewport.Destination;
+                                    if (renderSystems.TryGetValue(destination, out RenderingMachine renderSystem))
+                                    {
+                                        if (!renderSystem.renderers.TryGetValue(viewport, out Dictionary<RendererKey, List<uint>> groups))
+                                        {
+                                            groups = new();
+                                            renderSystem.renderers.Add(viewport, groups);
+                                        }
 
-                                RendererKey key = new(materialEntity, meshEntity);
-                                if (!groups.TryGetValue(key, out List<uint> renderers))
-                                {
-                                    renderers = new();
-                                    groups.Add(key, renderers);
-                                    renderSystem.infos.AddOrSet(key, new(materialEntity, meshEntity, vertexShaderEntity, fragmentShaderEntity));
-                                }
+                                        RendererKey key = new(materialEntity, meshEntity);
+                                        if (!groups.TryGetValue(key, out List<uint> renderers))
+                                        {
+                                            renderers = new();
+                                            groups.Add(key, renderers);
+                                            renderSystem.infos.AddOrSet(key, new(materialEntity, meshEntity, vertexShaderEntity, fragmentShaderEntity));
+                                        }
 
-                                renderers.Add(entity);
+                                        renderers.Add(entity);
+                                    }
+                                }
                             }
                         }
                     }
@@ -199,7 +216,7 @@ namespace Rendering.Systems
             }
         }
 
-        private readonly void FindViewports(World world)
+        private readonly void FindViewports(World world, ComponentType viewportType, TagType disabledTag)
         {
             //reset viewport lists
             for (uint i = 0; i < viewportEntities.Length; i++)
@@ -207,36 +224,43 @@ namespace Rendering.Systems
                 viewportEntities[i].Clear();
             }
 
-            ComponentQuery<IsViewport> query = new(world);
-            query.ExcludeDisabled(true);
-            foreach (var r in query)
+            foreach (Chunk chunk in world.Chunks)
             {
-                Viewport viewport = new Entity(world, r.entity).As<Viewport>();
-                Destination destination = viewport.Destination;
-                if (renderSystems.TryGetValue(destination, out RenderingMachine destinationRenderer))
+                if (chunk.Definition.Contains(viewportType) && !chunk.Definition.Contains(disabledTag))
                 {
-                    destinationRenderer.viewports.Add(viewport);
-                    renderSystems[destination] = destinationRenderer;
-                }
-                else
-                {
-                    //system with label not found
-                }
-
-                LayerMask renderMask = viewport.RenderMask;
-                for (byte l = 0; l < LayerMask.Capacity; l++)
-                {
-                    if (renderMask.Contains(l))
+                    USpan<uint> entities = chunk.Entities;
+                    USpan<IsViewport> components = chunk.GetComponents<IsViewport>(viewportType);
+                    for (uint i = 0; i < entities.Length; i++)
                     {
-                        viewportEntities[l].Add(viewport);
+                        ref IsViewport component = ref components[i];
+                        Viewport viewport = new Entity(world, entities[i]).As<Viewport>();
+                        Destination destination = viewport.Destination;
+                        if (renderSystems.TryGetValue(destination, out RenderingMachine destinationRenderer))
+                        {
+                            destinationRenderer.viewports.Add(viewport);
+                            renderSystems[destination] = destinationRenderer;
+                        }
+                        else
+                        {
+                            //system with label not found
+                        }
+
+                        LayerMask renderMask = viewport.RenderMask;
+                        for (byte l = 0; l < LayerMask.Capacity; l++)
+                        {
+                            if (renderMask.Contains(l))
+                            {
+                                viewportEntities[l].Add(viewport);
+                            }
+                        }
                     }
                 }
             }
         }
 
-        private readonly void CreateNewSystems(World world)
+        private readonly void CreateNewSystems(World world, ComponentType destinationType)
         {
-            CreateNewRenderers(world);
+            CreateNewRenderers(world, destinationType);
 
             //reset lists
             foreach (Destination destination in knownDestinations)
