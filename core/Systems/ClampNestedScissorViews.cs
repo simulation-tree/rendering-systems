@@ -15,7 +15,7 @@ namespace Rendering.Systems
         private readonly Array<bool> hasScissor;
         private readonly List<List<uint>> sortedEntities;
         private readonly Array<uint> parentEntities;
-        private readonly Operation addMissingComponents;
+        private readonly Operation operation;
 
         private ClampNestedScissorViews(Array<Vector4> scissors, Array<bool> hasScissor, List<List<uint>> sortedEntities, Array<uint> parentEntities, Operation addMissingComponents)
         {
@@ -23,7 +23,7 @@ namespace Rendering.Systems
             this.hasScissor = hasScissor;
             this.sortedEntities = sortedEntities;
             this.parentEntities = parentEntities;
-            this.addMissingComponents = addMissingComponents;
+            this.operation = addMissingComponents;
         }
 
         void ISystem.Start(in SystemContainer systemContainer, in World world)
@@ -48,7 +48,7 @@ namespace Rendering.Systems
                     entities.Dispose();
                 }
 
-                addMissingComponents.Dispose();
+                operation.Dispose();
                 parentEntities.Dispose();
                 sortedEntities.Dispose();
                 hasScissor.Dispose();
@@ -76,49 +76,60 @@ namespace Rendering.Systems
                 entities.Clear();
             }
 
-            //add missing components
-            Schema schema = world.Schema;
-            ComponentQuery<RendererScissor> withoutWorldScissorQuery = new(world);
-            withoutWorldScissorQuery.ExcludeComponent<WorldRendererScissor>();
-            foreach (var r in withoutWorldScissorQuery)
+            //add missing world scissor component
+            ComponentType scissorComponent = world.Schema.GetComponent<RendererScissor>();
+            ComponentType worldScissorComponent = world.Schema.GetComponent<WorldRendererScissor>();
+            foreach (Chunk chunk in world.Chunks)
             {
-                addMissingComponents.SelectEntity(r.entity);
+                Definition definition = chunk.Definition;
+                if (definition.Contains(scissorComponent) && !definition.Contains(worldScissorComponent))
+                {
+                    operation.SelectEntities(chunk.Entities);
+                }
             }
 
-            if (addMissingComponents.Count > 0)
+            if (operation.Count > 0)
             {
-                addMissingComponents.AddComponent<WorldRendererScissor>(schema);
-                world.Perform(addMissingComponents);
-                addMissingComponents.Clear();
+                operation.AddComponent<WorldRendererScissor>();
+                operation.Perform(world);
+                operation.Clear();
             }
 
             //gather values for later
-            foreach (var child in world.Entities)
+            foreach (uint child in world.Entities)
             {
                 uint parent = world.GetParent(child);
                 parentEntities[child] = parent;
             }
 
-            ComponentQuery<RendererScissor> scissorQuery = new(world);
-            foreach (var r in scissorQuery)
+            foreach (Chunk chunk in world.Chunks)
             {
-                uint entity = r.entity;
-                scissors[entity] = r.component1.value;
-                hasScissor[entity] = true;
-                uint parent = parentEntities[entity];
-                uint depth = 0;
-                while (parent != default)
+                Definition definition = chunk.Definition;
+                if (definition.Contains(scissorComponent))
                 {
-                    depth++;
-                    parent = world.GetParent(parent);
-                }
+                    USpan<uint> entities = chunk.Entities;
+                    USpan<RendererScissor> components = chunk.GetComponents<RendererScissor>(scissorComponent);
+                    for (uint i = 0; i < entities.Length; i++)
+                    {
+                        uint entity = entities[i];
+                        scissors[entity] = components[i].value;
+                        hasScissor[entity] = true;
+                        uint parent = parentEntities[entity];
+                        uint depth = 0;
+                        while (parent != default)
+                        {
+                            depth++;
+                            parent = world.GetParent(parent);
+                        }
 
-                while (sortedEntities.Count <= depth)
-                {
-                    sortedEntities.Add(new());
-                }
+                        while (sortedEntities.Count <= depth)
+                        {
+                            sortedEntities.Add(new());
+                        }
 
-                sortedEntities[depth].Add(entity);
+                        sortedEntities[depth].Add(entity);
+                    }
+                }
             }
 
             //do the thing
@@ -171,11 +182,19 @@ namespace Rendering.Systems
             }
 
             //apply values
-            ComponentQuery<WorldRendererScissor> worldScissorQuery = new(world);
-            foreach (var r in worldScissorQuery)
+            foreach (Chunk chunk in world.Chunks)
             {
-                ref WorldRendererScissor scissor = ref r.component1;
-                scissor.value = scissors[r.entity];
+                Definition definition = chunk.Definition;
+                if (definition.Contains(worldScissorComponent))
+                {
+                    USpan<uint> entities = chunk.Entities;
+                    USpan<WorldRendererScissor> components = chunk.GetComponents<WorldRendererScissor>(worldScissorComponent);
+                    for (uint i = 0; i < entities.Length; i++)
+                    {
+                        uint entity = entities[i];
+                        components[i].value = scissors[entity];
+                    }
+                }
             }
         }
 
