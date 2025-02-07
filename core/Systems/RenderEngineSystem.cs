@@ -16,33 +16,23 @@ namespace Rendering.Systems
         private readonly List<Destination> knownDestinations;
         private readonly Dictionary<FixedString, RenderingBackend> availableBackends;
         private readonly Dictionary<Destination, RenderingMachine> renderSystems;
-        private readonly Array<List<Viewport>> viewportEntities;
+        private readonly List<ViewportData> viewportEntities;
         private readonly List<Dictionary<RendererKey, List<uint>>> rendererGroups;
 
-        private RenderEngineSystem(List<Destination> knownDestinations, Dictionary<FixedString, RenderingBackend> availableSystemTypes, Dictionary<Destination, RenderingMachine> renderSystems, Array<List<Viewport>> viewportEntities, List<Dictionary<RendererKey, List<uint>>> rendererGroups)
+        private RenderEngineSystem(World world)
         {
-            this.knownDestinations = knownDestinations;
-            this.availableBackends = availableSystemTypes;
-            this.renderSystems = renderSystems;
-            this.viewportEntities = viewportEntities;
-            this.rendererGroups = rendererGroups;
+            this.knownDestinations = new();
+            this.availableBackends = new();
+            this.renderSystems = new();
+            this.viewportEntities = new();
+            this.rendererGroups = new();
         }
 
         void ISystem.Start(in SystemContainer systemContainer, in World world)
         {
             if (systemContainer.World == world)
             {
-                List<Destination> knownDestinations = new();
-                Dictionary<FixedString, RenderingBackend> availableSystemTypes = new();
-                Dictionary<Destination, RenderingMachine> renderSystems = new();
-                Array<List<Viewport>> viewportEntities = new(32);
-                List<Dictionary<RendererKey, List<uint>>> rendererGroups = new();
-                for (uint i = 0; i < viewportEntities.Length; i++)
-                {
-                    viewportEntities[i] = new(32);
-                }
-
-                systemContainer.Write(new RenderEngineSystem(knownDestinations, availableSystemTypes, renderSystems, viewportEntities, rendererGroups));
+                systemContainer.Write(new RenderEngineSystem(world));
             }
         }
 
@@ -63,11 +53,6 @@ namespace Rendering.Systems
         {
             if (systemContainer.World == world)
             {
-                for (uint i = viewportEntities.Length - 1; i != uint.MaxValue; i--)
-                {
-                    viewportEntities[i].Dispose();
-                }
-
                 foreach (Destination key in renderSystems.Keys)
                 {
                     ref RenderingMachine renderSystem = ref renderSystems[key];
@@ -183,31 +168,29 @@ namespace Rendering.Systems
                         }
 
                         LayerMask renderMask = component.renderMask;
-                        for (byte l = 0; l < LayerMask.Capacity; l++)
+
+                        //for each viewport, add this renderer if it intersects with their render mak
+                        foreach (ViewportData viewport in viewportEntities)
                         {
-                            if (renderMask.Contains(l))
+                            if (viewport.renderMask.ContainsAny(renderMask))
                             {
-                                foreach (Viewport viewport in viewportEntities[l])
+                                if (renderSystems.TryGetValue(viewport.destination, out RenderingMachine renderSystem))
                                 {
-                                    Destination destination = viewport.Destination;
-                                    if (renderSystems.TryGetValue(destination, out RenderingMachine renderSystem))
+                                    if (!renderSystem.renderers.TryGetValue(viewport.entity, out Dictionary<RendererKey, List<uint>> groups))
                                     {
-                                        if (!renderSystem.renderers.TryGetValue(viewport, out Dictionary<RendererKey, List<uint>> groups))
-                                        {
-                                            groups = new();
-                                            renderSystem.renderers.Add(viewport, groups);
-                                        }
-
-                                        RendererKey key = new(materialEntity, meshEntity);
-                                        if (!groups.TryGetValue(key, out List<uint> renderers))
-                                        {
-                                            renderers = new();
-                                            groups.Add(key, renderers);
-                                            renderSystem.infos.AddOrSet(key, new(materialEntity, meshEntity, vertexShaderEntity, fragmentShaderEntity));
-                                        }
-
-                                        renderers.Add(entity);
+                                        groups = new();
+                                        renderSystem.renderers.Add(viewport.entity, groups);
                                     }
+
+                                    RendererKey key = new(materialEntity, meshEntity);
+                                    if (!groups.TryGetValue(key, out List<uint> renderers))
+                                    {
+                                        renderers = new();
+                                        groups.Add(key, renderers);
+                                        renderSystem.infos.AddOrSet(key, new(materialEntity, meshEntity, vertexShaderEntity, fragmentShaderEntity));
+                                    }
+
+                                    renderers.Add(entity);
                                 }
                             }
                         }
@@ -219,11 +202,7 @@ namespace Rendering.Systems
         private readonly void FindViewports(World world, ComponentType viewportType, TagType disabledTag)
         {
             //reset viewport lists
-            for (uint i = 0; i < viewportEntities.Length; i++)
-            {
-                viewportEntities[i].Clear();
-            }
-
+            viewportEntities.Clear();
             foreach (Chunk chunk in world.Chunks)
             {
                 if (chunk.Definition.Contains(viewportType) && !chunk.Definition.Contains(disabledTag))
@@ -245,14 +224,7 @@ namespace Rendering.Systems
                             //system with label not found
                         }
 
-                        LayerMask renderMask = viewport.RenderMask;
-                        for (byte l = 0; l < LayerMask.Capacity; l++)
-                        {
-                            if (renderMask.Contains(l))
-                            {
-                                viewportEntities[l].Add(viewport);
-                            }
-                        }
+                        viewportEntities.Add(new(viewport, component.renderMask, destination));
                     }
                 }
             }
@@ -319,27 +291,27 @@ namespace Rendering.Systems
                     continue;
                 }
 
-                //make sure renderer entries that no longer exist are not in this list
-                //todo: is this needed?
                 foreach (Viewport viewport in renderSystem.viewports)
                 {
                     ref Dictionary<RendererKey, List<uint>> groups = ref renderSystem.renderers.TryGetValue(viewport, out bool containsGroups);
                     if (containsGroups)
                     {
                         rendererGroups.Add(groups);
-                        foreach (RendererKey key in groups.Keys)
-                        {
-                            ref List<uint> renderers = ref groups[key];
-                            uint rendererCount = renderers.Count;
-                            for (uint r = rendererCount - 1; r != uint.MaxValue; r--)
-                            {
-                                uint rendererEntity = renderers[r];
-                                if (!world.ContainsEntity(rendererEntity))
-                                {
-                                    renderers.RemoveAt(r);
-                                }
-                            }
-                        }
+                        //make sure renderer entries that no longer exist are not in this list
+                        //todo: is this needed?
+                        //foreach (RendererKey key in groups.Keys)
+                        //{
+                        //    ref List<uint> renderers = ref groups[key];
+                        //    uint rendererCount = renderers.Count;
+                        //    for (uint r = rendererCount - 1; r != uint.MaxValue; r--)
+                        //    {
+                        //        uint rendererEntity = renderers[r];
+                        //        if (!world.ContainsEntity(rendererEntity))
+                        //        {
+                        //            renderers.RemoveAt(r);
+                        //        }
+                        //    }
+                        //}
                     }
                 }
 
