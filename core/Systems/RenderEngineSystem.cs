@@ -6,11 +6,13 @@ using Shaders.Components;
 using Simulation;
 using System;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using Unmanaged;
 using Worlds;
 
 namespace Rendering.Systems
 {
+    [SkipLocalsInit]
     public readonly partial struct RenderEngineSystem : ISystem
     {
         private readonly List<Destination> knownDestinations;
