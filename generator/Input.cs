@@ -7,7 +7,7 @@ namespace Rendering.Generator
     {
         public readonly TypeDeclarationSyntax typeDeclaration;
         public readonly ITypeSymbol typeSymbol;
-        public readonly string containingNamespace;
+        public readonly string? containingNamespace;
         public readonly string typeName;
         public readonly string fullTypeName;
 
@@ -15,7 +15,7 @@ namespace Rendering.Generator
         {
             this.typeDeclaration = typeDeclaration;
             this.typeSymbol = typeSymbol;
-            containingNamespace = typeSymbol.ContainingNamespace.ToDisplayString();
+            containingNamespace = typeSymbol.ContainingNamespace?.ToDisplayString();
             typeName = typeSymbol.Name;
             fullTypeName = typeSymbol.ToDisplayString();
         }
