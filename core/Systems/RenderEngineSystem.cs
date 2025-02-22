@@ -352,7 +352,7 @@ namespace Rendering.Systems
 
                 if (destination.IsDestroyed)
                 {
-                    RenderingMachine destinationRenderer = renderSystems.Remove(destination);
+                    renderSystems.Remove(destination, out RenderingMachine destinationRenderer);
                     destinationRenderer.Dispose();
                     knownDestinations.RemoveAt(i);
                     Trace.WriteLine($"Removed render system for destination `{destination}`");
