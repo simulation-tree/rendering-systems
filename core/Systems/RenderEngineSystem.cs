@@ -20,14 +20,20 @@ namespace Rendering.Systems
         private readonly Dictionary<Destination, RenderingMachine> renderSystems;
         private readonly List<ViewportData> viewportEntities;
         private readonly List<Dictionary<RendererKey, List<uint>>> rendererGroups;
+        private readonly Array<IsMaterial> materialComponents;
+        private readonly Array<IsShader> shaderComponents;
+        private readonly Array<IsMesh> meshComponents;
 
         private RenderEngineSystem(World world)
         {
-            this.knownDestinations = new();
-            this.availableBackends = new();
-            this.renderSystems = new();
-            this.viewportEntities = new();
-            this.rendererGroups = new();
+            knownDestinations = new();
+            availableBackends = new();
+            renderSystems = new();
+            viewportEntities = new();
+            rendererGroups = new();
+            materialComponents = new();
+            shaderComponents = new();
+            meshComponents = new();
         }
 
         void ISystem.Start(in SystemContainer systemContainer, in World world)
@@ -50,6 +56,7 @@ namespace Rendering.Systems
             DestroyOldSystems(world);
             CreateNewSystems(world, destinationType);
             FindViewports(world, viewportType, disabledTag);
+            CollectComponents(world, materialType, shaderType, meshType);
             FindRenderers(world, rendererType, materialType, shaderType, meshType, disabledTag);
             Render(world, destinationType, shaderType, meshType);
         }
@@ -58,6 +65,10 @@ namespace Rendering.Systems
         {
             if (systemContainer.World == world)
             {
+                meshComponents.Dispose();
+                shaderComponents.Dispose();
+                materialComponents.Dispose();
+
                 foreach (Destination key in renderSystems.Keys)
                 {
                     ref RenderingMachine renderSystem = ref renderSystems[key];
@@ -133,6 +144,61 @@ namespace Rendering.Systems
             }
         }
 
+        private readonly void CollectComponents(World world, ComponentType materialType, ComponentType shaderType, ComponentType meshType)
+        {
+            uint capacity = Allocations.GetNextPowerOf2(world.MaxEntityValue + 1);
+            if (materialComponents.Length < capacity)
+            {
+                materialComponents.Length = capacity;
+            }
+
+            if (shaderComponents.Length < capacity)
+            {
+                shaderComponents.Length = capacity;
+            }
+            
+            if (meshComponents.Length < capacity)
+            {
+                meshComponents.Length = capacity;
+            }
+
+            materialComponents.Clear();
+            shaderComponents.Clear();
+            meshComponents.Clear();
+
+            foreach (Chunk chunk in world.Chunks)
+            {
+                Definition definition = chunk.Definition;
+                USpan<uint> entities = chunk.Entities;
+                if (definition.Contains(materialType))
+                {
+                    USpan<IsMaterial> components = chunk.GetComponents<IsMaterial>(materialType);
+                    for (uint i = 0; i < entities.Length; i++)
+                    {
+                        materialComponents[entities[i]] = components[i];
+                    }
+                }
+
+                if (definition.Contains(shaderType))
+                {
+                    USpan<IsShader> components = chunk.GetComponents<IsShader>(shaderType);
+                    for (uint i = 0; i < entities.Length; i++)
+                    {
+                        shaderComponents[entities[i]] = components[i];
+                    }
+                }
+
+                if (definition.Contains(meshType))
+                {
+                    USpan<IsMesh> components = chunk.GetComponents<IsMesh>(meshType);
+                    for (uint i = 0; i < entities.Length; i++)
+                    {
+                        meshComponents[entities[i]] = components[i];
+                    }
+                }
+            }
+        }
+
         private readonly void FindRenderers(World world, ComponentType rendererType, ComponentType materialType, ComponentType shaderType, ComponentType meshType, TagType disabledTag)
         {
             foreach (Chunk chunk in world.Chunks)
@@ -147,27 +213,30 @@ namespace Rendering.Systems
                         uint entity = entities[i];
                         rint materialReference = component.materialReference;
                         uint materialEntity = world.GetReference(entity, materialReference);
-                        if (!world.ContainsComponent<IsMaterial>(materialEntity))
+                        IsMaterial materialComponent = materialComponents[materialEntity];
+                        if (materialComponent == default)
                         {
                             continue; //material not yet loaded
                         }
 
-                        IsMaterial materialComponent = world.GetComponent<IsMaterial>(materialEntity, materialType);
                         uint vertexShaderEntity = world.GetReference(materialEntity, materialComponent.vertexShaderReference);
-                        if (!world.Contains(vertexShaderEntity, shaderType))
+                        IsShader vertexShaderComponent = shaderComponents[vertexShaderEntity];
+                        if (vertexShaderComponent == default)
                         {
                             continue; //vertex shader not yet loaded
                         }
 
                         uint fragmentShaderEntity = world.GetReference(materialEntity, materialComponent.fragmentShaderReference);
-                        if (!world.Contains(fragmentShaderEntity, shaderType))
+                        IsShader fragmentShaderComponent = shaderComponents[fragmentShaderEntity];
+                        if (fragmentShaderComponent == default)
                         {
                             continue; //fragment shader not yet loaded
                         }
 
                         rint meshReference = component.meshReference;
                         uint meshEntity = world.GetReference(entity, meshReference);
-                        if (!world.Contains(meshEntity, meshType))
+                        IsMesh meshComponent = meshComponents[meshEntity];
+                        if (meshComponent == default)
                         {
                             continue; //mesh not yet loaded
                         }
@@ -328,9 +397,9 @@ namespace Rendering.Systems
                         ref List<uint> renderers = ref groups[key];
                         ref RendererCombination info = ref renderSystem.infos[key];
                         MaterialData material = new(info.material, 0);
-                        MeshData mesh = new(info.mesh, world.GetComponent<IsMesh>(info.mesh, meshType).version);
-                        VertexShaderData vertexShader = new(info.vertexShader, world.GetComponent<IsShader>(info.vertexShader, shaderType).version);
-                        FragmentShaderData fragmentShader = new(info.fragmentShader, world.GetComponent<IsShader>(info.fragmentShader, shaderType).version);
+                        MeshData mesh = new(info.mesh, meshComponents[info.mesh].version);
+                        VertexShaderData vertexShader = new(info.vertexShader, shaderComponents[info.vertexShader].version);
+                        FragmentShaderData fragmentShader = new(info.fragmentShader, shaderComponents[info.fragmentShader].version);
                         renderSystem.Render(renderers.AsSpan(), material, mesh, vertexShader, fragmentShader);
                     }
                 }
