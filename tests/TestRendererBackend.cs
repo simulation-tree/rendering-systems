@@ -1,4 +1,4 @@
-﻿using Collections;
+﻿using Collections.Generic;
 using Simulation;
 using System;
 using System.Numerics;
@@ -25,7 +25,7 @@ namespace Rendering.Systems.Tests
 
         (Allocation renderer, Allocation instance) IRenderingBackend.Create(in Destination destination, in USpan<FixedString> extensionNames)
         {
-            Allocation renderer = Allocation.Create(new TestRenderer(destination, extensionNames));
+            Allocation renderer = Allocation.CreateFromValue(new TestRenderer(destination, extensionNames));
             renderingMachines.Add(renderer);
             return (renderer, renderer);
         }

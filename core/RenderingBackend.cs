@@ -58,7 +58,7 @@ namespace Rendering
             SurfaceCreated surfaceCreated = v.SurfaceCreatedFunction;
             BeginRender beginRender = v.BeginRenderFunction;
             EndRender endRender = v.EndRenderFunction;
-            Allocation rendererBackend = Allocation.Create(v);
+            Allocation rendererBackend = Allocation.CreateFromValue(v);
             return new(rendererBackend, v.Label, initialize, finalize, create, dispose, surfaceCreated, beginRender, render, endRender);
         }
 
