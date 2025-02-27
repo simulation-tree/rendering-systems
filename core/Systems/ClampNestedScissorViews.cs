@@ -77,12 +77,12 @@ namespace Rendering.Systems
             }
 
             //add missing world scissor component
-            ComponentType scissorComponent = world.Schema.GetComponent<RendererScissor>();
-            ComponentType worldScissorComponent = world.Schema.GetComponent<WorldRendererScissor>();
+            ComponentType scissorComponent = world.Schema.GetComponentType<RendererScissor>();
+            ComponentType worldScissorComponent = world.Schema.GetComponentType<WorldRendererScissor>();
             foreach (Chunk chunk in world.Chunks)
             {
                 Definition definition = chunk.Definition;
-                if (definition.Contains(scissorComponent) && !definition.Contains(worldScissorComponent))
+                if (definition.ContainsComponent(scissorComponent) && !definition.ContainsComponent(worldScissorComponent))
                 {
                     operation.SelectEntities(chunk.Entities);
                 }
@@ -105,7 +105,7 @@ namespace Rendering.Systems
             foreach (Chunk chunk in world.Chunks)
             {
                 Definition definition = chunk.Definition;
-                if (definition.Contains(scissorComponent))
+                if (definition.ContainsComponent(scissorComponent))
                 {
                     USpan<uint> entities = chunk.Entities;
                     USpan<RendererScissor> components = chunk.GetComponents<RendererScissor>(scissorComponent);
@@ -185,7 +185,7 @@ namespace Rendering.Systems
             foreach (Chunk chunk in world.Chunks)
             {
                 Definition definition = chunk.Definition;
-                if (definition.Contains(worldScissorComponent))
+                if (definition.ContainsComponent(worldScissorComponent))
                 {
                     USpan<uint> entities = chunk.Entities;
                     USpan<WorldRendererScissor> components = chunk.GetComponents<WorldRendererScissor>(worldScissorComponent);

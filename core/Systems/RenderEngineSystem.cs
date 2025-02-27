@@ -47,12 +47,12 @@ namespace Rendering.Systems
 
         void ISystem.Update(in SystemContainer systemContainer, in World world, in TimeSpan delta)
         {
-            ComponentType destinationType = world.Schema.GetComponent<IsDestination>();
-            ComponentType rendererType = world.Schema.GetComponent<IsRenderer>();
-            ComponentType viewportType = world.Schema.GetComponent<IsViewport>();
-            ComponentType materialType = world.Schema.GetComponent<IsMaterial>();
-            ComponentType shaderType = world.Schema.GetComponent<IsShader>();
-            ComponentType meshType = world.Schema.GetComponent<IsMesh>();
+            ComponentType destinationType = world.Schema.GetComponentType<IsDestination>();
+            ComponentType rendererType = world.Schema.GetComponentType<IsRenderer>();
+            ComponentType viewportType = world.Schema.GetComponentType<IsViewport>();
+            ComponentType materialType = world.Schema.GetComponentType<IsMaterial>();
+            ComponentType shaderType = world.Schema.GetComponentType<IsShader>();
+            ComponentType meshType = world.Schema.GetComponentType<IsMesh>();
             TagType disabledTag = TagType.Disabled;
             DestroyOldSystems(world);
             CreateNewSystems(world, destinationType);
@@ -112,7 +112,7 @@ namespace Rendering.Systems
             USpan<FixedString> extensionNames = stackalloc FixedString[32];
             foreach (Chunk chunk in world.Chunks)
             {
-                if (chunk.Definition.Contains(destinationType))
+                if (chunk.Definition.ContainsComponent(destinationType))
                 {
                     USpan<uint> entities = chunk.Entities;
                     USpan<IsDestination> components = chunk.GetComponents<IsDestination>(destinationType);
@@ -171,7 +171,7 @@ namespace Rendering.Systems
             {
                 Definition definition = chunk.Definition;
                 USpan<uint> entities = chunk.Entities;
-                if (definition.Contains(materialType))
+                if (definition.ContainsComponent(materialType))
                 {
                     USpan<IsMaterial> components = chunk.GetComponents<IsMaterial>(materialType);
                     for (uint i = 0; i < entities.Length; i++)
@@ -180,7 +180,7 @@ namespace Rendering.Systems
                     }
                 }
 
-                if (definition.Contains(shaderType))
+                if (definition.ContainsComponent(shaderType))
                 {
                     USpan<IsShader> components = chunk.GetComponents<IsShader>(shaderType);
                     for (uint i = 0; i < entities.Length; i++)
@@ -189,7 +189,7 @@ namespace Rendering.Systems
                     }
                 }
 
-                if (definition.Contains(meshType))
+                if (definition.ContainsComponent(meshType))
                 {
                     USpan<IsMesh> components = chunk.GetComponents<IsMesh>(meshType);
                     for (uint i = 0; i < entities.Length; i++)
@@ -204,7 +204,7 @@ namespace Rendering.Systems
         {
             foreach (Chunk chunk in world.Chunks)
             {
-                if (chunk.Definition.Contains(rendererType) && !chunk.Definition.Contains(disabledTag))
+                if (chunk.Definition.ContainsComponent(rendererType) && !chunk.Definition.ContainsTag(disabledTag))
                 {
                     USpan<uint> entities = chunk.Entities;
                     USpan<IsRenderer> components = chunk.GetComponents<IsRenderer>(rendererType);
@@ -280,7 +280,7 @@ namespace Rendering.Systems
             viewportEntities.Clear();
             foreach (Chunk chunk in world.Chunks)
             {
-                if (chunk.Definition.Contains(viewportType) && !chunk.Definition.Contains(disabledTag))
+                if (chunk.Definition.ContainsComponent(viewportType) && !chunk.Definition.ContainsTag(disabledTag))
                 {
                     USpan<uint> entities = chunk.Entities;
                     USpan<IsViewport> components = chunk.GetComponents<IsViewport>(viewportType);
