@@ -4,7 +4,7 @@ namespace Rendering
 {
     public readonly struct RendererKey : IEquatable<RendererKey>
     {
-        private readonly ulong value;
+        public readonly ulong value;
 
         public RendererKey(uint material, uint mesh)
         {

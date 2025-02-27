@@ -9,6 +9,8 @@ namespace Rendering
         public uint vertexShader;
         public uint fragmentShader;
 
+        public readonly ulong Key => ((ulong)material << 32) | mesh;
+
         public RendererCombination(uint material, uint mesh, uint vertexShader, uint fragmentShader)
         {
             this.material = material;
