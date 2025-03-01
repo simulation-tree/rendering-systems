@@ -129,7 +129,7 @@ namespace Rendering.Systems
                         if (availableBackends.TryGetValue(label, out RenderingBackend renderingBackend))
                         {
                             uint extensionNamesLength = destination.CopyExtensionNamesTo(extensionNames);
-                            (Allocation renderer, Allocation instance) = renderingBackend.create.Invoke(renderingBackend.allocation, destination, extensionNames.Slice(0, extensionNamesLength));
+                            (Allocation renderer, Allocation instance) = renderingBackend.create.Invoke(renderingBackend.allocation, destination, extensionNames.GetSpan(extensionNamesLength));
                             RenderingMachine newRenderSystem = new(renderer, renderingBackend);
                             renderSystems.Add(destination, newRenderSystem);
                             knownDestinations.Add(destination);
