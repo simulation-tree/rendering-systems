@@ -1,32 +1,33 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
-	<PropertyGroup>
-		<TargetFramework>net9.0</TargetFramework>
-		<ImplicitUsings>disable</ImplicitUsings>
-		<IncludeBuildOutput>false</IncludeBuildOutput>
-		<IncludeContentInPack>true</IncludeContentInPack>
-		<NoWarn>$(NoWarn);NU5128</NoWarn>
-		<Nullable>enable</Nullable>
-		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-		<GenerateDocumentationFile>True</GenerateDocumentationFile>
-		<Title>Rendering Systems</Title>
-		<Authors>popcron</Authors>
-		<Company>game-simulations</Company>
-		<RepositoryUrl>https://github.com/game-simulations/rendering-systems</RepositoryUrl>
-		<PackageReadmeFile>README.md</PackageReadmeFile>
-		<IsAotCompatible>True</IsAotCompatible>
-		<IsTrimmable>True</IsTrimmable>
-	</PropertyGroup>
+    <PropertyGroup>
+        <TargetFramework>net9.0</TargetFramework>
+        <ImplicitUsings>disable</ImplicitUsings>
+        <IncludeBuildOutput>false</IncludeBuildOutput>
+        <IncludeContentInPack>true</IncludeContentInPack>
+        <NoWarn>$(NoWarn);NU5128</NoWarn>
+        <Nullable>enable</Nullable>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+        <GenerateDocumentationFile>True</GenerateDocumentationFile>
+        <Title>Rendering Systems</Title>
+        <Authors>popcron</Authors>
+        <Company>game-simulations</Company>
+        <RepositoryUrl>https://github.com/game-simulations/rendering-systems</RepositoryUrl>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+        <IsAotCompatible>True</IsAotCompatible>
+        <IsTrimmable>True</IsTrimmable>
+        <PackageId/>
+    </PropertyGroup>
 
-	<ItemGroup>
-		<None Include="..\README.md">
-			<Pack>True</Pack>
-			<PackagePath>\</PackagePath>
-		</None>
-	</ItemGroup>
+    <ItemGroup>
+        <None Include="..\README.md">
+            <Pack>True</Pack>
+            <PackagePath>\</PackagePath>
+        </None>
+    </ItemGroup>
 
-	<ItemGroup>
-		<ProjectReference Include="..\core\Rendering.Systems.Core.csproj" />
-	</ItemGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\core\Rendering.Systems.Core.csproj"/>
+    </ItemGroup>
 
 </Project>
