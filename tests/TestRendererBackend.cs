@@ -9,9 +9,9 @@ namespace Rendering.Systems.Tests
     public readonly partial struct TestRendererBackend : IRenderingBackend
     {
         public static bool initialized;
-        public static readonly System.Collections.Generic.List<Allocation> renderingMachines = new();
+        public static readonly System.Collections.Generic.List<MemoryAddress> renderingMachines = new();
 
-        readonly FixedString IRenderingBackend.Label => "test";
+        readonly ASCIIText256 IRenderingBackend.Label => "test";
 
         void IRenderingBackend.Initialize()
         {
@@ -23,14 +23,14 @@ namespace Rendering.Systems.Tests
             initialized = false;
         }
 
-        (Allocation renderer, Allocation instance) IRenderingBackend.Create(in Destination destination, in USpan<FixedString> extensionNames)
+        (MemoryAddress renderer, MemoryAddress instance) IRenderingBackend.Create(in Destination destination, in USpan<ASCIIText256> extensionNames)
         {
-            Allocation renderer = Allocation.CreateFromValue(new TestRenderer(destination, extensionNames));
+            MemoryAddress renderer = MemoryAddress.Allocate(new TestRenderer(destination, extensionNames));
             renderingMachines.Add(renderer);
             return (renderer, renderer);
         }
 
-        void IRenderingBackend.Dispose(in Allocation renderer)
+        void IRenderingBackend.Dispose(in MemoryAddress renderer)
         {
             ref TestRenderer testRenderer = ref renderer.Read<TestRenderer>();
             testRenderer.Dispose();
@@ -38,13 +38,13 @@ namespace Rendering.Systems.Tests
             renderer.Dispose();
         }
 
-        void IRenderingBackend.SurfaceCreated(in Allocation renderer, Allocation surface)
+        void IRenderingBackend.SurfaceCreated(in MemoryAddress renderer, MemoryAddress surface)
         {
             ref TestRenderer testRenderer = ref renderer.Read<TestRenderer>();
             testRenderer.surface = surface;
         }
 
-        StatusCode IRenderingBackend.BeginRender(in Allocation renderer, in Vector4 clearColor)
+        StatusCode IRenderingBackend.BeginRender(in MemoryAddress renderer, in Vector4 clearColor)
         {
             ref TestRenderer testRenderer = ref renderer.Read<TestRenderer>();
             testRenderer.clearColor = clearColor;
@@ -56,7 +56,7 @@ namespace Rendering.Systems.Tests
             return StatusCode.Continue;
         }
 
-        void IRenderingBackend.Render(in Allocation renderer, in USpan<uint> entities, in MaterialData material, in MeshData mesh, in VertexShaderData vertexShader, in FragmentShaderData fragmentShader)
+        void IRenderingBackend.Render(in MemoryAddress renderer, in USpan<uint> entities, in MaterialData material, in MeshData mesh, in VertexShaderData vertexShader, in FragmentShaderData fragmentShader)
         {
             ref TestRenderer testRenderer = ref renderer.Read<TestRenderer>();
             testRenderer.entities.AddRange(entities);
@@ -66,7 +66,7 @@ namespace Rendering.Systems.Tests
             testRenderer.fragmentShader = fragmentShader;
         }
 
-        void IRenderingBackend.EndRender(in Allocation renderer)
+        void IRenderingBackend.EndRender(in MemoryAddress renderer)
         {
             ref TestRenderer testRenderer = ref renderer.Read<TestRenderer>();
             testRenderer.finishedRendering = true;
@@ -76,17 +76,17 @@ namespace Rendering.Systems.Tests
     public struct TestRenderer : IDisposable
     {
         public readonly Destination destination;
-        public readonly Array<FixedString> extensionNames;
+        public readonly Array<ASCIIText256> extensionNames;
         public readonly List<uint> entities;
         public Vector4 clearColor;
         public MaterialData material;
         public MeshData mesh;
         public VertexShaderData vertexShader;
         public FragmentShaderData fragmentShader;
-        public Allocation surface;
+        public MemoryAddress surface;
         public bool finishedRendering;
 
-        public TestRenderer(Destination destination, USpan<FixedString> extensionNames)
+        public TestRenderer(Destination destination, USpan<ASCIIText256> extensionNames)
         {
             this.destination = destination;
             this.extensionNames = new(extensionNames);

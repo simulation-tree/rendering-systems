@@ -59,7 +59,7 @@ namespace Rendering.Systems
         void ISystem.Update(in SystemContainer systemContainer, in World world, in TimeSpan delta)
         {
             //prepare buffers
-            uint capacity = Allocations.GetNextPowerOf2(world.MaxEntityValue + 1);
+            uint capacity = (world.MaxEntityValue + 1).GetNextPowerOf2();
             if (scissors.Length < capacity)
             {
                 scissors.Length = capacity;

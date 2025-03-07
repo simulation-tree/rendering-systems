@@ -17,7 +17,7 @@ namespace Rendering.Systems
     public readonly partial struct RenderEngineSystem : ISystem
     {
         private readonly List<Destination> knownDestinations;
-        private readonly Dictionary<FixedString, RenderingBackend> availableBackends;
+        private readonly Dictionary<ASCIIText256, RenderingBackend> availableBackends;
         private readonly Dictionary<Destination, RenderingMachine> renderSystems;
         private readonly List<ViewportData> viewportEntities;
         private readonly List<Dictionary<RendererKey, List<uint>>> rendererGroups;
@@ -80,7 +80,7 @@ namespace Rendering.Systems
                 renderSystems.Dispose();
                 knownDestinations.Dispose();
 
-                foreach (FixedString label in availableBackends.Keys)
+                foreach (ASCIIText256 label in availableBackends.Keys)
                 {
                     ref RenderingBackend rendererBackend = ref availableBackends[label];
                     rendererBackend.Dispose();
@@ -97,7 +97,7 @@ namespace Rendering.Systems
         /// </summary>
         public readonly void RegisterRenderingBackend<T>() where T : unmanaged, IRenderingBackend
         {
-            FixedString label = default(T).Label;
+            ASCIIText256 label = default(T).Label;
             if (availableBackends.ContainsKey(label))
             {
                 throw new InvalidOperationException($"Label `{label}` already has a render system registered for");
@@ -109,7 +109,7 @@ namespace Rendering.Systems
 
         private readonly void CreateNewRenderers(World world, ComponentType destinationType)
         {
-            USpan<FixedString> extensionNames = stackalloc FixedString[32];
+            USpan<ASCIIText256> extensionNames = stackalloc ASCIIText256[32];
             foreach (Chunk chunk in world.Chunks)
             {
                 if (chunk.Definition.ContainsComponent(destinationType))
@@ -125,11 +125,11 @@ namespace Rendering.Systems
                             return;
                         }
 
-                        FixedString label = component.rendererLabel;
+                        ASCIIText256 label = component.rendererLabel;
                         if (availableBackends.TryGetValue(label, out RenderingBackend renderingBackend))
                         {
                             uint extensionNamesLength = destination.CopyExtensionNamesTo(extensionNames);
-                            (Allocation renderer, Allocation instance) = renderingBackend.create.Invoke(renderingBackend.allocation, destination, extensionNames.GetSpan(extensionNamesLength));
+                            (MemoryAddress renderer, MemoryAddress instance) = renderingBackend.create.Invoke(renderingBackend.allocation, destination, extensionNames.GetSpan(extensionNamesLength));
                             RenderingMachine newRenderSystem = new(renderer, renderingBackend);
                             renderSystems.Add(destination, newRenderSystem);
                             knownDestinations.Add(destination);
@@ -147,7 +147,7 @@ namespace Rendering.Systems
 
         private readonly void CollectComponents(World world, ComponentType materialType, ComponentType shaderType, ComponentType meshType)
         {
-            uint capacity = Allocations.GetNextPowerOf2(world.MaxEntityValue + 1);
+            uint capacity = (world.MaxEntityValue + 1).GetNextPowerOf2();
             if (materialComponents.Length < capacity)
             {
                 materialComponents.Length = capacity;
@@ -157,7 +157,7 @@ namespace Rendering.Systems
             {
                 shaderComponents.Length = capacity;
             }
-            
+
             if (meshComponents.Length < capacity)
             {
                 meshComponents.Length = capacity;
@@ -331,7 +331,7 @@ namespace Rendering.Systems
                 }
 
                 //notify that surface has been created
-                if (!renderSystem.IsSurfaceAvailable && destination.TryGetSurfaceInUse(out Allocation surface))
+                if (!renderSystem.IsSurfaceAvailable && destination.TryGetSurfaceInUse(out MemoryAddress surface))
                 {
                     renderSystem.SurfaceCreated(surface);
                 }

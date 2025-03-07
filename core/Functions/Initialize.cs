@@ -12,9 +12,9 @@ namespace Rendering.Functions
     public unsafe readonly struct Initialize : IEquatable<Initialize>
     {
 #if NET
-        private readonly delegate* unmanaged<Allocation, void> function;
+        private readonly delegate* unmanaged<MemoryAddress, void> function;
 
-        public Initialize(delegate* unmanaged<Allocation, void> function)
+        public Initialize(delegate* unmanaged<MemoryAddress, void> function)
         {
             this.function = function;
         }
@@ -27,7 +27,7 @@ namespace Rendering.Functions
         }
 #endif
 
-        public readonly void Invoke(Allocation renderer)
+        public readonly void Invoke(MemoryAddress renderer)
         {
             function(renderer);
         }

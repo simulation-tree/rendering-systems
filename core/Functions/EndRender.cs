@@ -6,9 +6,9 @@ namespace Rendering.Functions
     public unsafe readonly struct EndRender
     {
 #if NET
-        private readonly delegate* unmanaged<Allocation, Allocation, void> function;
+        private readonly delegate* unmanaged<MemoryAddress, MemoryAddress, void> function;
 
-        public EndRender(delegate* unmanaged<Allocation, Allocation, void> function)
+        public EndRender(delegate* unmanaged<MemoryAddress, MemoryAddress, void> function)
         {
             this.function = function;
         }
@@ -21,7 +21,7 @@ namespace Rendering.Functions
         }
 #endif
 
-        public readonly void Invoke(Allocation backend, Allocation renderer)
+        public readonly void Invoke(MemoryAddress backend, MemoryAddress renderer)
         {
             function(backend, renderer);
         }

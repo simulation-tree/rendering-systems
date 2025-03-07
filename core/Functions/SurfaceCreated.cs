@@ -5,9 +5,9 @@ namespace Rendering.Functions
     public unsafe readonly struct SurfaceCreated
     {
 #if NET
-        private readonly delegate* unmanaged<Allocation, Allocation, Allocation, void> function;
+        private readonly delegate* unmanaged<MemoryAddress, MemoryAddress, MemoryAddress, void> function;
 
-        public SurfaceCreated(delegate* unmanaged<Allocation, Allocation, Allocation, void> function)
+        public SurfaceCreated(delegate* unmanaged<MemoryAddress, MemoryAddress, MemoryAddress, void> function)
         {
             this.function = function;
         }
@@ -20,7 +20,7 @@ namespace Rendering.Functions
         }
 #endif
 
-        public readonly void Invoke(Allocation backend, Allocation renderer, Allocation surface)
+        public readonly void Invoke(MemoryAddress backend, MemoryAddress renderer, MemoryAddress surface)
         {
             function(backend, renderer, surface);
         }

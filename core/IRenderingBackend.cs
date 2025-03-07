@@ -15,7 +15,7 @@ namespace Rendering
         /// <summary>
         /// Unique label referenced by <see cref="Destination"/> objects.
         /// </summary>
-        FixedString Label { get; }
+        ASCIIText256 Label { get; }
 
         public Initialize InitializeFunction => default;
         public Finalize FinalizeFunction => default;
@@ -43,32 +43,32 @@ namespace Rendering
         /// </para>
         /// </summary>
         /// <returns>The renderer that handles render functions, and the instance originating from the API in use.</returns>
-        (Allocation renderer, Allocation instance) Create(in Destination destination, in USpan<FixedString> extensionNames);
+        (MemoryAddress renderer, MemoryAddress instance) Create(in Destination destination, in USpan<ASCIIText256> extensionNames);
         
         /// <summary>
         /// Disposes a previously created renderer system.
         /// </summary>
-        void Dispose(in Allocation renderer);
+        void Dispose(in MemoryAddress renderer);
 
         /// <summary>
         /// Callback when a surface has been created for a renderer.
         /// </summary>
-        void SurfaceCreated(in Allocation renderer, Allocation surface);
+        void SurfaceCreated(in MemoryAddress renderer, MemoryAddress surface);
 
         /// <summary>
         /// Called to prepare for rendering.
         /// </summary>
-        StatusCode BeginRender(in Allocation renderer, in Vector4 clearColor);
+        StatusCode BeginRender(in MemoryAddress renderer, in Vector4 clearColor);
 
         /// <summary>
         /// Performs rendering of a single frame with the <see cref="Destination"/>
         /// the renderer was created with.
         /// </summary>
-        void Render(in Allocation renderer, in USpan<uint> entities, in MaterialData material, in MeshData mesh, in VertexShaderData vertexShader, in FragmentShaderData fragmentShader);
+        void Render(in MemoryAddress renderer, in USpan<uint> entities, in MaterialData material, in MeshData mesh, in VertexShaderData vertexShader, in FragmentShaderData fragmentShader);
 
         /// <summary>
         /// Finishes rendering a frame.
         /// </summary>
-        void EndRender(in Allocation renderer);
+        void EndRender(in MemoryAddress renderer);
     }
 }

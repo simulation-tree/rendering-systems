@@ -16,7 +16,7 @@ namespace Rendering.Systems
         public readonly Dictionary<Viewport, Dictionary<RendererKey, List<uint>>> renderers;
         public readonly Dictionary<RendererKey, RendererCombination> infos;
 
-        private readonly Allocation allocation;
+        private readonly MemoryAddress allocation;
         private readonly RenderingBackend backend;
 
         public readonly bool IsSurfaceAvailable => hasSurface;
@@ -29,7 +29,7 @@ namespace Rendering.Systems
         }
 #endif
 
-        internal RenderingMachine(Allocation allocation, RenderingBackend backend)
+        internal RenderingMachine(MemoryAddress allocation, RenderingBackend backend)
         {
             this.allocation = allocation;
             this.backend = backend;
@@ -61,7 +61,7 @@ namespace Rendering.Systems
             renderers.Dispose();
         }
 
-        public void SurfaceCreated(Allocation surface)
+        public void SurfaceCreated(MemoryAddress surface)
         {
             backend.surfaceCreated.Invoke(backend.allocation, allocation, surface);
             hasSurface = true;

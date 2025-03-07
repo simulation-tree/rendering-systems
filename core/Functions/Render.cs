@@ -23,15 +23,15 @@ namespace Rendering.Functions
         }
 #endif
 
-        public readonly void Invoke(Allocation backend, Allocation renderer, USpan<uint> entities, MaterialData material, MeshData mesh, VertexShaderData vertexShader, FragmentShaderData fragmentShader)
+        public readonly void Invoke(MemoryAddress backend, MemoryAddress renderer, USpan<uint> entities, MaterialData material, MeshData mesh, VertexShaderData vertexShader, FragmentShaderData fragmentShader)
         {
             function(new(backend, renderer, entities, material, mesh, vertexShader, fragmentShader));
         }
 
         public readonly struct Input
         {
-            public readonly Allocation backend;
-            public readonly Allocation renderer;
+            public readonly MemoryAddress backend;
+            public readonly MemoryAddress renderer;
             public readonly MaterialData material;
             public readonly MeshData mesh;
             public readonly VertexShaderData vertexShader;
@@ -45,7 +45,7 @@ namespace Rendering.Functions
             /// </summary>
             public readonly USpan<uint> Entities => new(entities, count);
 
-            public Input(Allocation backend, Allocation renderer, USpan<uint> entities, MaterialData material, MeshData mesh, VertexShaderData vertexShader, FragmentShaderData fragmentShader)
+            public Input(MemoryAddress backend, MemoryAddress renderer, USpan<uint> entities, MaterialData material, MeshData mesh, VertexShaderData vertexShader, FragmentShaderData fragmentShader)
             {
                 this.backend = backend;
                 this.renderer = renderer;

@@ -10,8 +10,8 @@ namespace Rendering
     /// </summary>
     public readonly struct RenderingBackend : IDisposable
     {
-        public readonly Allocation allocation;
-        public readonly FixedString label;
+        public readonly MemoryAddress allocation;
+        public readonly ASCIIText256 label;
         public readonly Create create;
         public readonly Dispose dispose;
         public readonly SurfaceCreated surfaceCreated;
@@ -21,7 +21,7 @@ namespace Rendering
 
         private readonly Finalize finalize;
 
-        private RenderingBackend(Allocation allocation, FixedString label, Initialize initialize, Finalize finalize, Create create, Dispose dispose, SurfaceCreated surfaceCreated, BeginRender beginRender, Render render, EndRender endRender)
+        private RenderingBackend(MemoryAddress allocation, ASCIIText256 label, Initialize initialize, Finalize finalize, Create create, Dispose dispose, SurfaceCreated surfaceCreated, BeginRender beginRender, Render render, EndRender endRender)
         {
             this.allocation = allocation;
             this.label = label;
@@ -58,11 +58,11 @@ namespace Rendering
             SurfaceCreated surfaceCreated = v.SurfaceCreatedFunction;
             BeginRender beginRender = v.BeginRenderFunction;
             EndRender endRender = v.EndRenderFunction;
-            Allocation rendererBackend = Allocation.CreateFromValue(v);
+            MemoryAddress rendererBackend = MemoryAddress.Allocate(v);
             return new(rendererBackend, v.Label, initialize, finalize, create, dispose, surfaceCreated, beginRender, render, endRender);
         }
 
-        public static FixedString GetLabel<T>() where T : unmanaged, IRenderingBackend
+        public static ASCIIText256 GetLabel<T>() where T : unmanaged, IRenderingBackend
         {
             return default(T).Label;
         }

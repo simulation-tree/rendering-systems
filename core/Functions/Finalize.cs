@@ -9,9 +9,9 @@ namespace Rendering.Functions
     public unsafe readonly struct Finalize
     {
 #if NET
-        private readonly delegate* unmanaged<Allocation, void> function;
+        private readonly delegate* unmanaged<MemoryAddress, void> function;
 
-        public Finalize(delegate* unmanaged<Allocation, void> function)
+        public Finalize(delegate* unmanaged<MemoryAddress, void> function)
         {
             this.function = function;
         }
@@ -24,7 +24,7 @@ namespace Rendering.Functions
         }
 #endif
 
-        public readonly void Invoke(Allocation allocation)
+        public readonly void Invoke(MemoryAddress allocation)
         {
             function(allocation);
         }

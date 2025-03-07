@@ -7,9 +7,9 @@ namespace Rendering.Functions
     public unsafe readonly struct BeginRender
     {
 #if NET
-        private readonly delegate* unmanaged<Allocation, Allocation, Vector4, StatusCode> function;
+        private readonly delegate* unmanaged<MemoryAddress, MemoryAddress, Vector4, StatusCode> function;
 
-        public BeginRender(delegate* unmanaged<Allocation, Allocation, Vector4, StatusCode> function)
+        public BeginRender(delegate* unmanaged<MemoryAddress, MemoryAddress, Vector4, StatusCode> function)
         {
             this.function = function;
         }
@@ -22,7 +22,7 @@ namespace Rendering.Functions
         }
 #endif
 
-        public readonly StatusCode Invoke(Allocation backend, Allocation renderer, Vector4 color)
+        public readonly StatusCode Invoke(MemoryAddress backend, MemoryAddress renderer, Vector4 color)
         {
             return function(backend, renderer, color);
         }

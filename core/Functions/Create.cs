@@ -23,7 +23,7 @@ namespace Rendering.Functions
         }
 #endif
 
-        public readonly (Allocation renderer, Allocation instance) Invoke(Allocation backend, Destination destination, USpan<FixedString> extensionNames)
+        public readonly (MemoryAddress renderer, MemoryAddress instance) Invoke(MemoryAddress backend, Destination destination, USpan<ASCIIText256> extensionNames)
         {
             Input input = new(backend, destination, extensionNames);
             Output result = function(input);
@@ -32,29 +32,29 @@ namespace Rendering.Functions
 
         public readonly struct Input
         {
-            public readonly Allocation backend;
+            public readonly MemoryAddress backend;
             public readonly Destination destination;
 
-            private readonly FixedString* extensionNames;
+            private readonly ASCIIText256* extensionNames;
             private readonly uint length;
 
-            public readonly USpan<FixedString> ExtensionNames => new(extensionNames, length);
+            public readonly USpan<ASCIIText256> ExtensionNames => new(extensionNames, length);
 
-            public Input(Allocation backend, Destination destination, USpan<FixedString> extensionNames)
+            public Input(MemoryAddress backend, Destination destination, USpan<ASCIIText256> extensionNames)
             {
                 this.backend = backend;
                 this.destination = destination;
-                this.extensionNames = (FixedString*)extensionNames.Address;
+                this.extensionNames = (ASCIIText256*)extensionNames.Address;
                 length = extensionNames.Length;
             }
         }
 
         public readonly struct Output
         {
-            public readonly Allocation renderer;
-            public readonly Allocation instance;
+            public readonly MemoryAddress renderer;
+            public readonly MemoryAddress instance;
 
-            public Output(Allocation renderer, Allocation instance)
+            public Output(MemoryAddress renderer, MemoryAddress instance)
             {
                 this.renderer = renderer;
                 this.instance = instance;

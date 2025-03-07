@@ -11,6 +11,7 @@ namespace Rendering.Generator
     {
         private const string RenderingBackendInterface = "IRenderingBackend";
         private const string FullRenderingBackendInterface = $"Rendering.{RenderingBackendInterface}";
+        private const string MemoryAddressType = "Unmanaged.MemoryAddress";
 
         void IIncrementalGenerator.Initialize(IncrementalGeneratorInitializationContext context)
         {
@@ -98,7 +99,12 @@ namespace Rendering.Generator
                         source.AppendLine("return new(&Initialize);");
                         source.AppendLine();
                         source.AppendLine("[UnmanagedCallersOnly]");
-                        source.AppendLine("static void Initialize(Allocation backend)");
+                        
+                        source.Append("static void Initialize(");
+                        source.Append(MemoryAddressType);
+                        source.Append(" backend)");
+                        source.AppendLine();
+
                         source.BeginGroup();
                         {
                             source.AppendLine($"ref {input.typeName} rendererBackend = ref backend.Read<{input.typeName}>();");
@@ -124,7 +130,12 @@ namespace Rendering.Generator
                         source.AppendLine("return new(&Finalize);");
                         source.AppendLine();
                         source.AppendLine("[UnmanagedCallersOnly]");
-                        source.AppendLine("static void Finalize(Allocation backend)");
+
+                        source.Append("static void Finalize(");
+                        source.Append(MemoryAddressType);
+                        source.Append(" backend)");
+                        source.AppendLine();
+
                         source.BeginGroup();
                         {
                             source.AppendLine($"ref {input.typeName} rendererBackend = ref backend.Read<{input.typeName}>();");
@@ -154,7 +165,14 @@ namespace Rendering.Generator
                         source.BeginGroup();
                         {
                             source.AppendLine($"ref {input.typeName} rendererBackend = ref input.backend.Read<{input.typeName}>();");
-                            source.AppendLine("(Allocation renderer, Allocation instance) = rendererBackend.Create(input.destination, input.ExtensionNames);");
+
+                            source.Append("(");
+                            source.Append(MemoryAddressType);
+                            source.Append(" renderer, ");
+                            source.Append(MemoryAddressType);
+                            source.Append(" instance) = rendererBackend.Create(input.destination, input.ExtensionNames);");
+                            source.AppendLine();
+
                             source.AppendLine("return new(renderer, instance);");
                         }
                         source.EndGroup();
@@ -177,7 +195,14 @@ namespace Rendering.Generator
                         source.AppendLine("return new(&Dispose);");
                         source.AppendLine();
                         source.AppendLine("[UnmanagedCallersOnly]");
-                        source.AppendLine("static void Dispose(Allocation backend, Allocation renderer)");
+
+                        source.Append("static void Dispose(");
+                        source.Append(MemoryAddressType);
+                        source.Append(" backend, ");
+                        source.Append(MemoryAddressType);
+                        source.Append(" renderer)");
+                        source.AppendLine();
+
                         source.BeginGroup();
                         {
                             source.AppendLine($"ref {input.typeName} rendererBackend = ref backend.Read<{input.typeName}>();");
@@ -203,7 +228,16 @@ namespace Rendering.Generator
                         source.AppendLine("return new(&SurfaceCreated);");
                         source.AppendLine();
                         source.AppendLine("[UnmanagedCallersOnly]");
-                        source.AppendLine("static void SurfaceCreated(Allocation backend, Allocation renderer, Allocation surface)");
+
+                        source.Append("static void SurfaceCreated(");
+                        source.Append(MemoryAddressType);
+                        source.Append(" backend, ");
+                        source.Append(MemoryAddressType);
+                        source.Append(" renderer, ");
+                        source.Append(MemoryAddressType);
+                        source.Append(" surface)");
+                        source.AppendLine();
+
                         source.BeginGroup();
                         {
                             source.AppendLine($"ref {input.typeName} rendererBackend = ref backend.Read<{input.typeName}>();");
@@ -229,7 +263,14 @@ namespace Rendering.Generator
                         source.AppendLine("return new(&BeginRender);");
                         source.AppendLine();
                         source.AppendLine("[UnmanagedCallersOnly]");
-                        source.AppendLine("static StatusCode BeginRender(Allocation backend, Allocation renderer, Vector4 clearColor)");
+                        
+                        source.Append("static StatusCode BeginRender(");
+                        source.Append(MemoryAddressType);
+                        source.Append(" backend, ");
+                        source.Append(MemoryAddressType);
+                        source.Append(" renderer, Vector4 clearColor)");
+                        source.AppendLine();
+
                         source.BeginGroup();
                         {
                             source.AppendLine($"ref {input.typeName} rendererBackend = ref backend.Read<{input.typeName}>();");
@@ -281,7 +322,14 @@ namespace Rendering.Generator
                         source.AppendLine("return new(&EndRender);");
                         source.AppendLine();
                         source.AppendLine("[UnmanagedCallersOnly]");
-                        source.AppendLine("static void EndRender(Allocation backend, Allocation renderer)");
+
+                        source.Append("static void EndRender(");
+                        source.Append(MemoryAddressType);
+                        source.Append(" backend, ");
+                        source.Append(MemoryAddressType);
+                        source.Append(" renderer)");
+                        source.AppendLine();
+
                         source.BeginGroup();
                         {
                             source.AppendLine($"ref {input.typeName} rendererBackend = ref backend.Read<{input.typeName}>();");
