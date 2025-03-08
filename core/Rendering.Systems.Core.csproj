@@ -10,8 +10,8 @@
         <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
         <Title>Rendering Systems Core</Title>
         <Authors>popcron</Authors>
-        <Company>game-simulations</Company>
-        <RepositoryUrl>https://github.com/game-simulations/rendering-systems</RepositoryUrl>
+        <Company>simulation-tree</Company>
+        <RepositoryUrl>https://github.com/simulation-tree/rendering-systems</RepositoryUrl>
         <PackageId/>
     </PropertyGroup>
 

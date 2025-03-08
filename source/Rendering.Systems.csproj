@@ -11,8 +11,8 @@
         <GenerateDocumentationFile>True</GenerateDocumentationFile>
         <Title>Rendering Systems</Title>
         <Authors>popcron</Authors>
-        <Company>game-simulations</Company>
-        <RepositoryUrl>https://github.com/game-simulations/rendering-systems</RepositoryUrl>
+        <Company>simulation-tree</Company>
+        <RepositoryUrl>https://github.com/simulation-tree/rendering-systems</RepositoryUrl>
         <PackageReadmeFile>README.md</PackageReadmeFile>
         <IsAotCompatible>True</IsAotCompatible>
         <IsTrimmable>True</IsTrimmable>
