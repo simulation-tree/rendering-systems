@@ -59,7 +59,7 @@ namespace Rendering.Systems
         void ISystem.Update(in SystemContainer systemContainer, in World world, in TimeSpan delta)
         {
             //prepare buffers
-            uint capacity = (world.MaxEntityValue + 1).GetNextPowerOf2();
+            int capacity = (world.MaxEntityValue + 1).GetNextPowerOf2();
             if (scissors.Length < capacity)
             {
                 scissors.Length = capacity;
@@ -99,7 +99,7 @@ namespace Rendering.Systems
             foreach (uint child in world.Entities)
             {
                 uint parent = world.GetParent(child);
-                parentEntities[child] = parent;
+                parentEntities[(int)child] = parent;
             }
 
             foreach (Chunk chunk in world.Chunks)
@@ -107,15 +107,15 @@ namespace Rendering.Systems
                 Definition definition = chunk.Definition;
                 if (definition.ContainsComponent(scissorComponent))
                 {
-                    USpan<uint> entities = chunk.Entities;
-                    USpan<RendererScissor> components = chunk.GetComponents<RendererScissor>(scissorComponent);
-                    for (uint i = 0; i < entities.Length; i++)
+                    ReadOnlySpan<uint> entities = chunk.Entities;
+                    Span<RendererScissor> components = chunk.GetComponents<RendererScissor>(scissorComponent);
+                    for (int i = 0; i < entities.Length; i++)
                     {
                         uint entity = entities[i];
-                        scissors[entity] = components[i].value;
-                        hasScissor[entity] = true;
-                        uint parent = parentEntities[entity];
-                        uint depth = 0;
+                        scissors[(int)entity] = components[i].value;
+                        hasScissor[(int)entity] = true;
+                        uint parent = parentEntities[(int)entity];
+                        int depth = 0;
                         while (parent != default)
                         {
                             depth++;
@@ -137,20 +137,20 @@ namespace Rendering.Systems
             {
                 foreach (uint entity in entities)
                 {
-                    uint parent = parentEntities[entity];
+                    uint parent = parentEntities[(int)entity];
                     Vector4 parentScissor = default;
                     bool foundParentScissor = false;
                     while (parent != default)
                     {
-                        if (hasScissor[parent])
+                        if (hasScissor[(int)parent])
                         {
-                            parentScissor = scissors[parent];
+                            parentScissor = scissors[(int)parent];
                             foundParentScissor = true;
                             break;
                         }
                         else
                         {
-                            parent = parentEntities[parent];
+                            parent = parentEntities[(int)parent];
                         }
                     }
 
@@ -161,7 +161,7 @@ namespace Rendering.Systems
                         float parentMaxX = parentScissor.X + parentScissor.Z;
                         float parentMaxY = parentScissor.Y + parentScissor.W;
 
-                        ref Vector4 scissor = ref scissors[entity];
+                        ref Vector4 scissor = ref scissors[(int)entity];
                         float minX = scissor.X;
                         float minY = scissor.Y;
                         float maxX = scissor.X + scissor.Z;
@@ -187,12 +187,12 @@ namespace Rendering.Systems
                 Definition definition = chunk.Definition;
                 if (definition.ContainsComponent(worldScissorComponent))
                 {
-                    USpan<uint> entities = chunk.Entities;
-                    USpan<WorldRendererScissor> components = chunk.GetComponents<WorldRendererScissor>(worldScissorComponent);
-                    for (uint i = 0; i < entities.Length; i++)
+                    ReadOnlySpan<uint> entities = chunk.Entities;
+                    Span<WorldRendererScissor> components = chunk.GetComponents<WorldRendererScissor>(worldScissorComponent);
+                    for (int i = 0; i < entities.Length; i++)
                     {
                         uint entity = entities[i];
-                        components[i].value = scissors[entity];
+                        components[i].value = scissors[(int)entity];
                     }
                 }
             }

@@ -4,6 +4,7 @@ using Rendering.Components;
 using Unmanaged;
 using System.Numerics;
 using Simulation;
+using System;
 
 namespace Rendering
 {
@@ -43,7 +44,7 @@ namespace Rendering
         /// </para>
         /// </summary>
         /// <returns>The renderer that handles render functions, and the instance originating from the API in use.</returns>
-        (MemoryAddress renderer, MemoryAddress instance) Create(in Destination destination, in USpan<ASCIIText256> extensionNames);
+        (MemoryAddress renderer, MemoryAddress instance) Create(in Destination destination, in ReadOnlySpan<ASCIIText256> extensionNames);
         
         /// <summary>
         /// Disposes a previously created renderer system.
@@ -64,7 +65,7 @@ namespace Rendering
         /// Performs rendering of a single frame with the <see cref="Destination"/>
         /// the renderer was created with.
         /// </summary>
-        void Render(in MemoryAddress renderer, in USpan<uint> entities, in MaterialData material, in MeshData mesh, in VertexShaderData vertexShader, in FragmentShaderData fragmentShader);
+        void Render(in MemoryAddress renderer, in ReadOnlySpan<uint> entities, in MaterialData material, in MeshData mesh, in VertexShaderData vertexShader, in FragmentShaderData fragmentShader);
 
         /// <summary>
         /// Finishes rendering a frame.

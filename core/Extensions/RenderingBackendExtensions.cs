@@ -1,4 +1,5 @@
 ﻿using Simulation;
+using System;
 using System.Numerics;
 using Unmanaged;
 
@@ -16,7 +17,7 @@ namespace Rendering
             backend.Finalize();
         }
 
-        public static (MemoryAddress renderer, MemoryAddress instance) Create<T>(this ref T backend, in Destination destination, in USpan<ASCIIText256> extensionNames) where T : unmanaged, IRenderingBackend
+        public static (MemoryAddress renderer, MemoryAddress instance) Create<T>(this ref T backend, in Destination destination, in Span<ASCIIText256> extensionNames) where T : unmanaged, IRenderingBackend
         {
             return backend.Create(destination, extensionNames);
         }
@@ -36,7 +37,7 @@ namespace Rendering
             return backend.BeginRender(renderer, clearColor);
         }
 
-        public static void Render<T>(this ref T backend, in MemoryAddress renderer, in USpan<uint> entities, in MaterialData material, in MeshData mesh, in VertexShaderData vertexShader, in FragmentShaderData fragmentShader) where T : unmanaged, IRenderingBackend
+        public static void Render<T>(this ref T backend, in MemoryAddress renderer, in Span<uint> entities, in MaterialData material, in MeshData mesh, in VertexShaderData vertexShader, in FragmentShaderData fragmentShader) where T : unmanaged, IRenderingBackend
         {
             backend.Render(renderer, entities, material, mesh, vertexShader, fragmentShader);
         }

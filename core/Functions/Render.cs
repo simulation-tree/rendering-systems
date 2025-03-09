@@ -1,4 +1,5 @@
-﻿using Unmanaged;
+﻿using System;
+using Unmanaged;
 
 namespace Rendering.Functions
 {
@@ -23,7 +24,7 @@ namespace Rendering.Functions
         }
 #endif
 
-        public readonly void Invoke(MemoryAddress backend, MemoryAddress renderer, USpan<uint> entities, MaterialData material, MeshData mesh, VertexShaderData vertexShader, FragmentShaderData fragmentShader)
+        public readonly void Invoke(MemoryAddress backend, MemoryAddress renderer, Span<uint> entities, MaterialData material, MeshData mesh, VertexShaderData vertexShader, FragmentShaderData fragmentShader)
         {
             function(new(backend, renderer, entities, material, mesh, vertexShader, fragmentShader));
         }
@@ -37,15 +38,15 @@ namespace Rendering.Functions
             public readonly VertexShaderData vertexShader;
             public readonly FragmentShaderData fragmentShader;
 
-            private readonly nint entities;
-            private readonly uint count;
+            private readonly uint* entities;
+            private readonly int count;
 
             /// <summary>
             /// All entities containing the same filter, callback and identifier combinations.
             /// </summary>
-            public readonly USpan<uint> Entities => new(entities, count);
+            public readonly Span<uint> Entities => new(entities, count);
 
-            public Input(MemoryAddress backend, MemoryAddress renderer, USpan<uint> entities, MaterialData material, MeshData mesh, VertexShaderData vertexShader, FragmentShaderData fragmentShader)
+            public Input(MemoryAddress backend, MemoryAddress renderer, Span<uint> entities, MaterialData material, MeshData mesh, VertexShaderData vertexShader, FragmentShaderData fragmentShader)
             {
                 this.backend = backend;
                 this.renderer = renderer;
@@ -53,7 +54,7 @@ namespace Rendering.Functions
                 this.mesh = mesh;
                 this.vertexShader = vertexShader;
                 this.fragmentShader = fragmentShader;
-                this.entities = entities.Address;
+                this.entities = entities.GetPointer();
                 count = entities.Length;
             }
         }

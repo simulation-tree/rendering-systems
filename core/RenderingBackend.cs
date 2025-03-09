@@ -58,7 +58,7 @@ namespace Rendering
             SurfaceCreated surfaceCreated = v.SurfaceCreatedFunction;
             BeginRender beginRender = v.BeginRenderFunction;
             EndRender endRender = v.EndRenderFunction;
-            MemoryAddress rendererBackend = MemoryAddress.Allocate(v);
+            MemoryAddress rendererBackend = MemoryAddress.AllocateValue(v);
             return new(rendererBackend, v.Label, initialize, finalize, create, dispose, surfaceCreated, beginRender, render, endRender);
         }
 

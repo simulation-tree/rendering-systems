@@ -23,9 +23,9 @@ namespace Rendering.Systems.Tests
             initialized = false;
         }
 
-        (MemoryAddress renderer, MemoryAddress instance) IRenderingBackend.Create(in Destination destination, in USpan<ASCIIText256> extensionNames)
+        (MemoryAddress renderer, MemoryAddress instance) IRenderingBackend.Create(in Destination destination, in ReadOnlySpan<ASCIIText256> extensionNames)
         {
-            MemoryAddress renderer = MemoryAddress.Allocate(new TestRenderer(destination, extensionNames));
+            MemoryAddress renderer = MemoryAddress.AllocateValue(new TestRenderer(destination, extensionNames));
             renderingMachines.Add(renderer);
             return (renderer, renderer);
         }
@@ -56,7 +56,7 @@ namespace Rendering.Systems.Tests
             return StatusCode.Continue;
         }
 
-        void IRenderingBackend.Render(in MemoryAddress renderer, in USpan<uint> entities, in MaterialData material, in MeshData mesh, in VertexShaderData vertexShader, in FragmentShaderData fragmentShader)
+        void IRenderingBackend.Render(in MemoryAddress renderer, in ReadOnlySpan<uint> entities, in MaterialData material, in MeshData mesh, in VertexShaderData vertexShader, in FragmentShaderData fragmentShader)
         {
             ref TestRenderer testRenderer = ref renderer.Read<TestRenderer>();
             testRenderer.entities.AddRange(entities);
@@ -86,7 +86,7 @@ namespace Rendering.Systems.Tests
         public MemoryAddress surface;
         public bool finishedRendering;
 
-        public TestRenderer(Destination destination, USpan<ASCIIText256> extensionNames)
+        public TestRenderer(Destination destination, ReadOnlySpan<ASCIIText256> extensionNames)
         {
             this.destination = destination;
             this.extensionNames = new(extensionNames);

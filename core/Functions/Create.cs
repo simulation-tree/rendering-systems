@@ -1,4 +1,5 @@
-﻿using Unmanaged;
+﻿using System;
+using Unmanaged;
 
 namespace Rendering.Functions
 {
@@ -23,7 +24,7 @@ namespace Rendering.Functions
         }
 #endif
 
-        public readonly (MemoryAddress renderer, MemoryAddress instance) Invoke(MemoryAddress backend, Destination destination, USpan<ASCIIText256> extensionNames)
+        public readonly (MemoryAddress renderer, MemoryAddress instance) Invoke(MemoryAddress backend, Destination destination, Span<ASCIIText256> extensionNames)
         {
             Input input = new(backend, destination, extensionNames);
             Output result = function(input);
@@ -36,15 +37,15 @@ namespace Rendering.Functions
             public readonly Destination destination;
 
             private readonly ASCIIText256* extensionNames;
-            private readonly uint length;
+            private readonly int length;
 
-            public readonly USpan<ASCIIText256> ExtensionNames => new(extensionNames, length);
+            public readonly Span<ASCIIText256> ExtensionNames => new(extensionNames, length);
 
-            public Input(MemoryAddress backend, Destination destination, USpan<ASCIIText256> extensionNames)
+            public Input(MemoryAddress backend, Destination destination, Span<ASCIIText256> extensionNames)
             {
                 this.backend = backend;
                 this.destination = destination;
-                this.extensionNames = (ASCIIText256*)extensionNames.Address;
+                this.extensionNames = extensionNames.GetPointer();
                 length = extensionNames.Length;
             }
         }

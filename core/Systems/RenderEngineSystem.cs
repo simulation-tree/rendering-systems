@@ -109,14 +109,14 @@ namespace Rendering.Systems
 
         private readonly void CreateNewRenderers(World world, ComponentType destinationType)
         {
-            USpan<ASCIIText256> extensionNames = stackalloc ASCIIText256[32];
+            Span<ASCIIText256> extensionNames = stackalloc ASCIIText256[32];
             foreach (Chunk chunk in world.Chunks)
             {
                 if (chunk.Definition.ContainsComponent(destinationType))
                 {
-                    USpan<uint> entities = chunk.Entities;
-                    USpan<IsDestination> components = chunk.GetComponents<IsDestination>(destinationType);
-                    for (uint i = 0; i < entities.Length; i++)
+                    ReadOnlySpan<uint> entities = chunk.Entities;
+                    Span<IsDestination> components = chunk.GetComponents<IsDestination>(destinationType);
+                    for (int i = 0; i < entities.Length; i++)
                     {
                         ref IsDestination component = ref components[i];
                         Destination destination = new Entity(world, entities[i]).As<Destination>();
@@ -128,8 +128,8 @@ namespace Rendering.Systems
                         ASCIIText256 label = component.rendererLabel;
                         if (availableBackends.TryGetValue(label, out RenderingBackend renderingBackend))
                         {
-                            uint extensionNamesLength = destination.CopyExtensionNamesTo(extensionNames);
-                            (MemoryAddress renderer, MemoryAddress instance) = renderingBackend.create.Invoke(renderingBackend.allocation, destination, extensionNames.GetSpan(extensionNamesLength));
+                            int extensionNamesLength = destination.CopyExtensionNamesTo(extensionNames);
+                            (MemoryAddress renderer, MemoryAddress instance) = renderingBackend.create.Invoke(renderingBackend.allocation, destination, extensionNames.Slice(0, extensionNamesLength));
                             RenderingMachine newRenderSystem = new(renderer, renderingBackend);
                             renderSystems.Add(destination, newRenderSystem);
                             knownDestinations.Add(destination);
@@ -147,7 +147,7 @@ namespace Rendering.Systems
 
         private readonly void CollectComponents(World world, ComponentType materialType, ComponentType shaderType, ComponentType meshType)
         {
-            uint capacity = (world.MaxEntityValue + 1).GetNextPowerOf2();
+            int capacity = (world.MaxEntityValue + 1).GetNextPowerOf2();
             if (materialComponents.Length < capacity)
             {
                 materialComponents.Length = capacity;
@@ -170,31 +170,31 @@ namespace Rendering.Systems
             foreach (Chunk chunk in world.Chunks)
             {
                 Definition definition = chunk.Definition;
-                USpan<uint> entities = chunk.Entities;
+                ReadOnlySpan<uint> entities = chunk.Entities;
                 if (definition.ContainsComponent(materialType))
                 {
-                    USpan<IsMaterial> components = chunk.GetComponents<IsMaterial>(materialType);
-                    for (uint i = 0; i < entities.Length; i++)
+                    Span<IsMaterial> components = chunk.GetComponents<IsMaterial>(materialType);
+                    for (int i = 0; i < entities.Length; i++)
                     {
-                        materialComponents[entities[i]] = components[i];
+                        materialComponents[(int)entities[i]] = components[i];
                     }
                 }
 
                 if (definition.ContainsComponent(shaderType))
                 {
-                    USpan<IsShader> components = chunk.GetComponents<IsShader>(shaderType);
-                    for (uint i = 0; i < entities.Length; i++)
+                    Span<IsShader> components = chunk.GetComponents<IsShader>(shaderType);
+                    for (int i = 0; i < entities.Length; i++)
                     {
-                        shaderComponents[entities[i]] = components[i];
+                        shaderComponents[(int)entities[i]] = components[i];
                     }
                 }
 
                 if (definition.ContainsComponent(meshType))
                 {
-                    USpan<IsMesh> components = chunk.GetComponents<IsMesh>(meshType);
-                    for (uint i = 0; i < entities.Length; i++)
+                    Span<IsMesh> components = chunk.GetComponents<IsMesh>(meshType);
+                    for (int i = 0; i < entities.Length; i++)
                     {
-                        meshComponents[entities[i]] = components[i];
+                        meshComponents[(int)entities[i]] = components[i];
                     }
                 }
             }
@@ -206,29 +206,29 @@ namespace Rendering.Systems
             {
                 if (chunk.Definition.ContainsComponent(rendererType) && !chunk.Definition.ContainsTag(disabledTag))
                 {
-                    USpan<uint> entities = chunk.Entities;
-                    USpan<IsRenderer> components = chunk.GetComponents<IsRenderer>(rendererType);
-                    for (uint i = 0; i < entities.Length; i++)
+                    ReadOnlySpan<uint> entities = chunk.Entities;
+                    Span<IsRenderer> components = chunk.GetComponents<IsRenderer>(rendererType);
+                    for (int i = 0; i < entities.Length; i++)
                     {
                         ref IsRenderer component = ref components[i];
                         uint entity = entities[i];
                         rint materialReference = component.materialReference;
                         uint materialEntity = world.GetReference(entity, materialReference);
-                        IsMaterial materialComponent = materialComponents[materialEntity];
+                        IsMaterial materialComponent = materialComponents[(int)materialEntity];
                         if (materialComponent == default)
                         {
                             continue; //material not yet loaded
                         }
 
                         uint vertexShaderEntity = world.GetReference(materialEntity, materialComponent.vertexShaderReference);
-                        IsShader vertexShaderComponent = shaderComponents[vertexShaderEntity];
+                        IsShader vertexShaderComponent = shaderComponents[(int)vertexShaderEntity];
                         if (vertexShaderComponent == default)
                         {
                             continue; //vertex shader not yet loaded
                         }
 
                         uint fragmentShaderEntity = world.GetReference(materialEntity, materialComponent.fragmentShaderReference);
-                        IsShader fragmentShaderComponent = shaderComponents[fragmentShaderEntity];
+                        IsShader fragmentShaderComponent = shaderComponents[(int)fragmentShaderEntity];
                         if (fragmentShaderComponent == default)
                         {
                             continue; //fragment shader not yet loaded
@@ -236,7 +236,7 @@ namespace Rendering.Systems
 
                         rint meshReference = component.meshReference;
                         uint meshEntity = world.GetReference(entity, meshReference);
-                        IsMesh meshComponent = meshComponents[meshEntity];
+                        IsMesh meshComponent = meshComponents[(int)meshEntity];
                         if (meshComponent == default)
                         {
                             continue; //mesh not yet loaded
@@ -282,9 +282,9 @@ namespace Rendering.Systems
             {
                 if (chunk.Definition.ContainsComponent(viewportType) && !chunk.Definition.ContainsTag(disabledTag))
                 {
-                    USpan<uint> entities = chunk.Entities;
-                    USpan<IsViewport> components = chunk.GetComponents<IsViewport>(viewportType);
-                    for (uint i = 0; i < entities.Length; i++)
+                    ReadOnlySpan<uint> entities = chunk.Entities;
+                    Span<IsViewport> components = chunk.GetComponents<IsViewport>(viewportType);
+                    for (int i = 0; i < entities.Length; i++)
                     {
                         ref IsViewport component = ref components[i];
                         Viewport viewport = new Entity(world, entities[i]).As<Viewport>();
@@ -398,9 +398,9 @@ namespace Rendering.Systems
                         ref List<uint> renderers = ref groups[key];
                         ref RendererCombination info = ref renderSystem.infos[key];
                         MaterialData material = new(info.material, 0);
-                        MeshData mesh = new(info.mesh, meshComponents[info.mesh].version);
-                        VertexShaderData vertexShader = new(info.vertexShader, shaderComponents[info.vertexShader].version);
-                        FragmentShaderData fragmentShader = new(info.fragmentShader, shaderComponents[info.fragmentShader].version);
+                        MeshData mesh = new(info.mesh, meshComponents[(int)info.mesh].version);
+                        VertexShaderData vertexShader = new(info.vertexShader, shaderComponents[(int)info.vertexShader].version);
+                        FragmentShaderData fragmentShader = new(info.fragmentShader, shaderComponents[(int)info.fragmentShader].version);
                         renderSystem.Render(renderers.AsSpan(), material, mesh, vertexShader, fragmentShader);
                     }
                 }
@@ -412,7 +412,7 @@ namespace Rendering.Systems
 
         private readonly void DestroyOldSystems(World world)
         {
-            for (uint i = knownDestinations.Count - 1; i != uint.MaxValue; i--)
+            for (int i = knownDestinations.Count - 1; i >= 0; i--)
             {
                 Destination destination = knownDestinations[i];
                 if (destination.world != world)
