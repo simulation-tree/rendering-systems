@@ -24,7 +24,7 @@ namespace Rendering.Functions
         }
 #endif
 
-        public readonly void Invoke(MemoryAddress backend, MemoryAddress renderer, Span<uint> entities, MaterialData material, MeshData mesh, VertexShaderData vertexShader, FragmentShaderData fragmentShader)
+        public readonly void Invoke(MemoryAddress backend, MemoryAddress renderer, ReadOnlySpan<uint> entities, MaterialData material, MeshData mesh, VertexShaderData vertexShader, FragmentShaderData fragmentShader)
         {
             function(new(backend, renderer, entities, material, mesh, vertexShader, fragmentShader));
         }
@@ -44,9 +44,9 @@ namespace Rendering.Functions
             /// <summary>
             /// All entities containing the same filter, callback and identifier combinations.
             /// </summary>
-            public readonly Span<uint> Entities => new(entities, count);
+            public readonly ReadOnlySpan<uint> Entities => new(entities, count);
 
-            public Input(MemoryAddress backend, MemoryAddress renderer, Span<uint> entities, MaterialData material, MeshData mesh, VertexShaderData vertexShader, FragmentShaderData fragmentShader)
+            public Input(MemoryAddress backend, MemoryAddress renderer, ReadOnlySpan<uint> entities, MaterialData material, MeshData mesh, VertexShaderData vertexShader, FragmentShaderData fragmentShader)
             {
                 this.backend = backend;
                 this.renderer = renderer;

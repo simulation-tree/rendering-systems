@@ -72,7 +72,7 @@ namespace Rendering.Systems
             return backend.beginRender.Invoke(backend.allocation, allocation, clearColor);
         }
 
-        public readonly void Render(System.Span<uint> renderers, MaterialData material, MeshData mesh, VertexShaderData vertexShader, FragmentShaderData fragmentShader)
+        public readonly void Render(ReadOnlySpan<uint> renderers, MaterialData material, MeshData mesh, VertexShaderData vertexShader, FragmentShaderData fragmentShader)
         {
             backend.render.Invoke(backend.allocation, allocation, renderers, material, mesh, vertexShader, fragmentShader);
         }

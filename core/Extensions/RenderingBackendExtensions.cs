@@ -37,7 +37,7 @@ namespace Rendering
             return backend.BeginRender(renderer, clearColor);
         }
 
-        public static void Render<T>(this ref T backend, in MemoryAddress renderer, in Span<uint> entities, in MaterialData material, in MeshData mesh, in VertexShaderData vertexShader, in FragmentShaderData fragmentShader) where T : unmanaged, IRenderingBackend
+        public static void Render<T>(this ref T backend, in MemoryAddress renderer, in ReadOnlySpan<uint> entities, in MaterialData material, in MeshData mesh, in VertexShaderData vertexShader, in FragmentShaderData fragmentShader) where T : unmanaged, IRenderingBackend
         {
             backend.Render(renderer, entities, material, mesh, vertexShader, fragmentShader);
         }
