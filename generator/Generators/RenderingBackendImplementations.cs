@@ -85,9 +85,9 @@ namespace Rendering.Systems.Generators
 
             source.BeginGroup();
             {
-                source.Append("readonly Initialize ");
+                source.Append("readonly StartFunction ");
                 source.Append(RenderingBackendInterface);
-                source.Append(".InitializeFunction");
+                source.Append(".StartFunction");
                 source.AppendLine();
 
                 source.BeginGroup();
@@ -95,11 +95,11 @@ namespace Rendering.Systems.Generators
                     source.AppendLine("get");
                     source.BeginGroup();
                     {
-                        source.AppendLine("return new(&Initialize);");
+                        source.AppendLine("return new(&Start);");
                         source.AppendLine();
                         source.AppendLine("[UnmanagedCallersOnly]");
                         
-                        source.Append("static void Initialize(");
+                        source.Append("static void Start(");
                         source.Append(MemoryAddressType);
                         source.Append(" backend)");
                         source.AppendLine();
@@ -107,7 +107,7 @@ namespace Rendering.Systems.Generators
                         source.BeginGroup();
                         {
                             source.AppendLine($"ref {input.typeName} rendererBackend = ref backend.Read<{input.typeName}>();");
-                            source.AppendLine("rendererBackend.Initialize();");
+                            source.AppendLine("RenderingBackendExtensions.PerformStart(ref rendererBackend);");
                         }
                         source.EndGroup();
                     }
@@ -116,9 +116,9 @@ namespace Rendering.Systems.Generators
                 source.EndGroup();
                 source.AppendLine();
 
-                source.Append("readonly Finalize ");
+                source.Append("readonly FinishFunction ");
                 source.Append(RenderingBackendInterface);
-                source.Append(".FinalizeFunction");
+                source.Append(".FinishFunction");
                 source.AppendLine();
 
                 source.BeginGroup();
@@ -126,11 +126,11 @@ namespace Rendering.Systems.Generators
                     source.AppendLine("get");
                     source.BeginGroup();
                     {
-                        source.AppendLine("return new(&Finalize);");
+                        source.AppendLine("return new(&Finish);");
                         source.AppendLine();
                         source.AppendLine("[UnmanagedCallersOnly]");
 
-                        source.Append("static void Finalize(");
+                        source.Append("static void Finish(");
                         source.Append(MemoryAddressType);
                         source.Append(" backend)");
                         source.AppendLine();
@@ -138,7 +138,7 @@ namespace Rendering.Systems.Generators
                         source.BeginGroup();
                         {
                             source.AppendLine($"ref {input.typeName} rendererBackend = ref backend.Read<{input.typeName}>();");
-                            source.AppendLine("rendererBackend.PerformFinalize();");
+                            source.AppendLine("RenderingBackendExtensions.PerformFinish(ref rendererBackend);");
                         }
                         source.EndGroup();
                     }
@@ -169,7 +169,7 @@ namespace Rendering.Systems.Generators
                             source.Append(MemoryAddressType);
                             source.Append(" renderer, ");
                             source.Append(MemoryAddressType);
-                            source.Append(" instance) = rendererBackend.Create(input.destination, input.ExtensionNames);");
+                            source.Append(" instance) = RenderingBackendExtensions.Create(ref rendererBackend, input.destination, input.ExtensionNames);");
                             source.AppendLine();
 
                             source.AppendLine("return new(renderer, instance);");
@@ -205,7 +205,7 @@ namespace Rendering.Systems.Generators
                         source.BeginGroup();
                         {
                             source.AppendLine($"ref {input.typeName} rendererBackend = ref backend.Read<{input.typeName}>();");
-                            source.AppendLine("rendererBackend.Dispose(renderer);");
+                            source.AppendLine("RenderingBackendExtensions.Dispose(ref rendererBackend, renderer);");
                         }
                         source.EndGroup();
                     }
@@ -240,7 +240,7 @@ namespace Rendering.Systems.Generators
                         source.BeginGroup();
                         {
                             source.AppendLine($"ref {input.typeName} rendererBackend = ref backend.Read<{input.typeName}>();");
-                            source.AppendLine("rendererBackend.SurfaceCreated(renderer, surface);");
+                            source.AppendLine("RenderingBackendExtensions.SurfaceCreated(ref rendererBackend, renderer, surface);");
                         }
                         source.EndGroup();
                     }
@@ -273,7 +273,7 @@ namespace Rendering.Systems.Generators
                         source.BeginGroup();
                         {
                             source.AppendLine($"ref {input.typeName} rendererBackend = ref backend.Read<{input.typeName}>();");
-                            source.AppendLine("return rendererBackend.BeginRender(renderer, clearColor);");
+                            source.AppendLine("return RenderingBackendExtensions.BeginRender(ref rendererBackend, renderer, clearColor);");
                         }
                         source.EndGroup();
                     }
@@ -299,7 +299,7 @@ namespace Rendering.Systems.Generators
                         source.BeginGroup();
                         {
                             source.AppendLine($"ref {input.typeName} rendererBackend = ref input.backend.Read<{input.typeName}>();");
-                            source.AppendLine("rendererBackend.Render(input.renderer, input.Entities, input.material, input.mesh, input.vertexShader, input.fragmentShader);");
+                            source.AppendLine("RenderingBackendExtensions.Render(ref rendererBackend, input.renderer, input.Entities, input.material, input.mesh, input.vertexShader, input.fragmentShader);");
                         }
                         source.EndGroup();
                     }
@@ -332,7 +332,7 @@ namespace Rendering.Systems.Generators
                         source.BeginGroup();
                         {
                             source.AppendLine($"ref {input.typeName} rendererBackend = ref backend.Read<{input.typeName}>();");
-                            source.AppendLine("rendererBackend.EndRender(renderer);");
+                            source.AppendLine("RenderingBackendExtensions.EndRender(ref rendererBackend, renderer);");
                         }
                         source.EndGroup();
                     }

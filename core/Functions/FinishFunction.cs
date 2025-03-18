@@ -4,14 +4,14 @@ namespace Rendering.Functions
 {
     /// <summary>
     /// Disposes and cleans up any resources for this render system type.
-    /// <para>Called just once and is balanced by the <see cref="Initialize"/> function.</para>
+    /// <para>Called just once and is balanced by the <see cref="StartFunction"/> function.</para>
     /// </summary>
-    public unsafe readonly struct Finalize
+    public unsafe readonly struct FinishFunction
     {
 #if NET
         private readonly delegate* unmanaged<MemoryAddress, void> function;
 
-        public Finalize(delegate* unmanaged<MemoryAddress, void> function)
+        public FinishFunction(delegate* unmanaged<MemoryAddress, void> function)
         {
             this.function = function;
         }

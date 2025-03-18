@@ -13,12 +13,12 @@ namespace Rendering.Systems.Tests
 
         readonly ASCIIText256 IRenderingBackend.Label => "test";
 
-        void IRenderingBackend.Initialize()
+        void IRenderingBackend.Start()
         {
             initialized = true;
         }
 
-        void IRenderingBackend.Finalize()
+        void IRenderingBackend.Finish()
         {
             initialized = false;
         }

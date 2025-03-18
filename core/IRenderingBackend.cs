@@ -18,8 +18,8 @@ namespace Rendering
         /// </summary>
         ASCIIText256 Label { get; }
 
-        public Initialize InitializeFunction => default;
-        public Finalize FinalizeFunction => default;
+        public StartFunction StartFunction => default;
+        public FinishFunction FinishFunction => default;
         public Create CreateFunction => default;
         public Dispose DisposeFunction => default;
         public SurfaceCreated SurfaceCreatedFunction => default;
@@ -30,12 +30,12 @@ namespace Rendering
         /// <summary>
         /// Called when the backend is registered.
         /// </summary>
-        void Initialize();
+        void Start();
 
         /// <summary>
         /// Called when the backend is unregistered.
         /// </summary>
-        void Finalize();
+        void Finish();
 
         /// <summary>
         /// Creates a renderer system for handling render functionality of the given <see cref="Destination"/>.

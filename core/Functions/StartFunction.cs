@@ -6,15 +6,15 @@ namespace Rendering.Functions
     /// <summary>
     /// Initializes the rendering backend system.
     /// <para>
-    /// Balanced with the <see cref="Finalize"/> function.
+    /// Balanced with the <see cref="FinishFunction"/> function.
     /// </para>
     /// </summary>
-    public unsafe readonly struct Initialize : IEquatable<Initialize>
+    public unsafe readonly struct StartFunction : IEquatable<StartFunction>
     {
 #if NET
         private readonly delegate* unmanaged<MemoryAddress, void> function;
 
-        public Initialize(delegate* unmanaged<MemoryAddress, void> function)
+        public StartFunction(delegate* unmanaged<MemoryAddress, void> function)
         {
             this.function = function;
         }
@@ -34,10 +34,10 @@ namespace Rendering.Functions
 
         public readonly override bool Equals(object? obj)
         {
-            return obj is Initialize initialize && Equals(initialize);
+            return obj is StartFunction initialize && Equals(initialize);
         }
 
-        public readonly bool Equals(Initialize other)
+        public readonly bool Equals(StartFunction other)
         {
             return (nint)function == (nint)other.function;
         }
@@ -47,12 +47,12 @@ namespace Rendering.Functions
             return ((nint)function).GetHashCode();
         }
 
-        public static bool operator ==(Initialize left, Initialize right)
+        public static bool operator ==(StartFunction left, StartFunction right)
         {
             return left.Equals(right);
         }
 
-        public static bool operator !=(Initialize left, Initialize right)
+        public static bool operator !=(StartFunction left, StartFunction right)
         {
             return !(left == right);
         }

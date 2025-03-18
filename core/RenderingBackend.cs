@@ -19,9 +19,9 @@ namespace Rendering
         public readonly Render render;
         public readonly EndRender endRender;
 
-        private readonly Finalize finalize;
+        private readonly FinishFunction finalize;
 
-        private RenderingBackend(MemoryAddress allocation, ASCIIText256 label, Initialize initialize, Finalize finalize, Create create, Dispose dispose, SurfaceCreated surfaceCreated, BeginRender beginRender, Render render, EndRender endRender)
+        private RenderingBackend(MemoryAddress allocation, ASCIIText256 label, StartFunction startFunction, FinishFunction finalize, Create create, Dispose dispose, SurfaceCreated surfaceCreated, BeginRender beginRender, Render render, EndRender endRender)
         {
             this.allocation = allocation;
             this.label = label;
@@ -33,11 +33,11 @@ namespace Rendering
             this.beginRender = beginRender;
             this.endRender = endRender;
 
-            initialize.Invoke(allocation);
+            startFunction.Invoke(allocation);
         }
 
         /// <summary>
-        /// Disposes of the rendering backend by calling the <see cref="Finalize"/> function.
+        /// Disposes of the rendering backend by calling the <see cref="FinishFunction"/> function.
         /// </summary>
         public void Dispose()
         {
@@ -50,8 +50,8 @@ namespace Rendering
             T v = default;
             ThrowIfDefault(v);
 
-            Initialize initialize = v.InitializeFunction;
-            Finalize finalize = v.FinalizeFunction;
+            StartFunction startFunction = v.StartFunction;
+            FinishFunction finalize = v.FinishFunction;
             Create create = v.CreateFunction;
             Dispose dispose = v.DisposeFunction;
             Render render = v.RenderFunction;
@@ -59,7 +59,7 @@ namespace Rendering
             BeginRender beginRender = v.BeginRenderFunction;
             EndRender endRender = v.EndRenderFunction;
             MemoryAddress rendererBackend = MemoryAddress.AllocateValue(v);
-            return new(rendererBackend, v.Label, initialize, finalize, create, dispose, surfaceCreated, beginRender, render, endRender);
+            return new(rendererBackend, v.Label, startFunction, finalize, create, dispose, surfaceCreated, beginRender, render, endRender);
         }
 
         public static ASCIIText256 GetLabel<T>() where T : unmanaged, IRenderingBackend
@@ -70,7 +70,7 @@ namespace Rendering
         [Conditional("DEBUG")]
         private static void ThrowIfDefault<T>(T backend) where T : unmanaged, IRenderingBackend
         {
-            if (backend.InitializeFunction == default)
+            if (backend.StartFunction == default)
             {
                 throw new InvalidOperationException($"Rendering backend {typeof(T)} doesn't have functions implemented");
             }
