@@ -8,7 +8,7 @@ namespace Rendering.Systems.Tests
         [Test]
         public void VerifyClampedScissor()
         {
-            simulator.AddSystem<ClampNestedScissorViews>();
+            simulator.AddSystem(new ClampNestedScissorViews());
 
             uint parentScissor = world.CreateEntity();
             uint childScissor = world.CreateEntity();
@@ -27,7 +27,7 @@ namespace Rendering.Systems.Tests
         [Test]
         public void OutOfBoundsChildScissor()
         {
-            simulator.AddSystem<ClampNestedScissorViews>();
+            simulator.AddSystem(new ClampNestedScissorViews());
 
             uint parentScissor = world.CreateEntity();
             uint childScissor = world.CreateEntity();
@@ -46,7 +46,7 @@ namespace Rendering.Systems.Tests
         [Test]
         public void DeepNestedChildren()
         {
-            simulator.AddSystem<ClampNestedScissorViews>();
+            simulator.AddSystem(new ClampNestedScissorViews());
 
             uint rootScissor = world.CreateEntity();
             uint parentScissor = world.CreateEntity();
@@ -70,7 +70,7 @@ namespace Rendering.Systems.Tests
         [Test]
         public void VerifyDeepDescendant()
         {
-            simulator.AddSystem<ClampNestedScissorViews>();
+            simulator.AddSystem(new ClampNestedScissorViews());
 
             uint rootEntity = world.CreateEntity();
             uint parentScissor = world.CreateEntity();

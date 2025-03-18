@@ -1,9 +1,9 @@
 ﻿using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
-namespace Rendering.Generator
+namespace Rendering.Systems
 {
-    public class Input
+    internal class Input
     {
         public readonly TypeDeclarationSyntax typeDeclaration;
         public readonly ITypeSymbol typeSymbol;

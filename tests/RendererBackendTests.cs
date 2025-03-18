@@ -12,7 +12,7 @@ namespace Rendering.Systems.Tests
         {
             Assert.That(TestRendererBackend.initialized, Is.False);
 
-            ref RenderingSystems renderingSystems = ref simulator.AddSystem<RenderingSystems>().Value;
+            RenderingSystems renderingSystems = simulator.AddSystem(new RenderingSystems());
             renderingSystems.RegisterRenderingBackend<TestRendererBackend>();
 
             Assert.That(TestRendererBackend.initialized, Is.True);
@@ -26,7 +26,7 @@ namespace Rendering.Systems.Tests
         public void CreatesRendererForDestination()
         {
             Destination testDestination = new(world, new(200, 200), RenderingBackend.GetLabel<TestRendererBackend>());
-            ref RenderingSystems renderingSystems = ref simulator.AddSystem<RenderingSystems>().Value;
+            RenderingSystems renderingSystems = simulator.AddSystem(new RenderingSystems());
             renderingSystems.RegisterRenderingBackend<TestRendererBackend>();
 
             simulator.Update();
@@ -42,7 +42,7 @@ namespace Rendering.Systems.Tests
             Destination destination = new(world, new(200, 200), RenderingBackend.GetLabel<TestRendererBackend>());
             destination.AddComponent(new SurfaceInUse());
 
-            ref RenderingSystems renderingSystems = ref simulator.AddSystem<RenderingSystems>().Value;
+            RenderingSystems renderingSystems = simulator.AddSystem(new RenderingSystems());
             renderingSystems.RegisterRenderingBackend<TestRendererBackend>();
 
             Mesh mesh = new(world);
@@ -71,7 +71,7 @@ namespace Rendering.Systems.Tests
             Destination destination = new(world, new(200, 200), RenderingBackend.GetLabel<TestRendererBackend>());
             destination.AddComponent(new SurfaceInUse());
 
-            ref RenderingSystems renderingSystems = ref simulator.AddSystem<RenderingSystems>().Value;
+            RenderingSystems renderingSystems = simulator.AddSystem(new RenderingSystems());
             renderingSystems.RegisterRenderingBackend<TestRendererBackend>();
 
             Mesh mesh = new(world);

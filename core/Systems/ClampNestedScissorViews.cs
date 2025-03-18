@@ -17,46 +17,38 @@ namespace Rendering.Systems
         private readonly Array<uint> parentEntities;
         private readonly Operation operation;
 
-        private ClampNestedScissorViews(Array<Vector4> scissors, Array<bool> hasScissor, List<List<uint>> sortedEntities, Array<uint> parentEntities, Operation addMissingComponents)
+        public ClampNestedScissorViews()
         {
-            this.scissors = scissors;
-            this.hasScissor = hasScissor;
-            this.sortedEntities = sortedEntities;
-            this.parentEntities = parentEntities;
-            this.operation = addMissingComponents;
+            this.scissors = new(4);
+            this.hasScissor = new(4);
+            this.sortedEntities = new(4);
+            this.parentEntities = new(4);
+            this.operation = new();
         }
 
-        void ISystem.Start(in SystemContainer systemContainer, in World world)
+        public readonly void Dispose()
         {
-            if (systemContainer.World == world)
+            foreach (List<uint> entities in sortedEntities)
             {
-                Array<Vector4> scissor = new();
-                Array<bool> hasScissor = new();
-                List<List<uint>> sortedEntities = new();
-                Array<uint> parentEntities = new();
-                Operation addMissingComponents = new();
-                systemContainer.Write(new ClampNestedScissorViews(scissor, hasScissor, sortedEntities, parentEntities, addMissingComponents));
+                entities.Dispose();
             }
+
+            operation.Dispose();
+            parentEntities.Dispose();
+            sortedEntities.Dispose();
+            hasScissor.Dispose();
+            scissors.Dispose();
         }
 
-        void ISystem.Finish(in SystemContainer systemContainer, in World world)
+        void ISystem.Start(in SystemContext context, in World world)
         {
-            if (systemContainer.World == world)
-            {
-                foreach (List<uint> entities in sortedEntities)
-                {
-                    entities.Dispose();
-                }
-
-                operation.Dispose();
-                parentEntities.Dispose();
-                sortedEntities.Dispose();
-                hasScissor.Dispose();
-                scissors.Dispose();
-            }
         }
 
-        void ISystem.Update(in SystemContainer systemContainer, in World world, in TimeSpan delta)
+        void ISystem.Finish(in SystemContext context, in World world)
+        {
+        }
+
+        void ISystem.Update(in SystemContext context, in World world, in TimeSpan delta)
         {
             //prepare buffers
             int capacity = (world.MaxEntityValue + 1).GetNextPowerOf2();
@@ -77,8 +69,8 @@ namespace Rendering.Systems
             }
 
             //add missing world scissor component
-            ComponentType scissorComponent = world.Schema.GetComponentType<RendererScissor>();
-            ComponentType worldScissorComponent = world.Schema.GetComponentType<WorldRendererScissor>();
+            int scissorComponent = world.Schema.GetComponentType<RendererScissor>();
+            int worldScissorComponent = world.Schema.GetComponentType<WorldRendererScissor>();
             foreach (Chunk chunk in world.Chunks)
             {
                 Definition definition = chunk.Definition;
@@ -108,7 +100,7 @@ namespace Rendering.Systems
                 if (definition.ContainsComponent(scissorComponent))
                 {
                     ReadOnlySpan<uint> entities = chunk.Entities;
-                    Span<RendererScissor> components = chunk.GetComponents<RendererScissor>(scissorComponent);
+                    ComponentEnumerator<RendererScissor> components = chunk.GetComponents<RendererScissor>(scissorComponent);
                     for (int i = 0; i < entities.Length; i++)
                     {
                         uint entity = entities[i];
@@ -188,7 +180,7 @@ namespace Rendering.Systems
                 if (definition.ContainsComponent(worldScissorComponent))
                 {
                     ReadOnlySpan<uint> entities = chunk.Entities;
-                    Span<WorldRendererScissor> components = chunk.GetComponents<WorldRendererScissor>(worldScissorComponent);
+                    ComponentEnumerator<WorldRendererScissor> components = chunk.GetComponents<WorldRendererScissor>(worldScissorComponent);
                     for (int i = 0; i < entities.Length; i++)
                     {
                         uint entity = entities[i];

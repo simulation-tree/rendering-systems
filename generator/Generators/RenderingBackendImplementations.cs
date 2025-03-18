@@ -2,9 +2,8 @@
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System.Threading;
-using Unmanaged;
 
-namespace Rendering.Generator
+namespace Rendering.Systems.Generators
 {
     [Generator(LanguageNames.CSharp)]
     public class RenderingBackendImplementations : IIncrementalGenerator
@@ -48,7 +47,7 @@ namespace Rendering.Generator
             }
         }
 
-        public static string Generate(Input input)
+        internal static string Generate(Input input)
         {
             SourceBuilder source = new();
             source.AppendLine("#pragma warning disable CS0465 //gc isnt even used");

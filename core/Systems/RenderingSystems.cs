@@ -13,35 +13,36 @@ namespace Rendering.Systems
             this.renderEngine = renderEngine;
         }
 
-        void ISystem.Start(in SystemContainer systemContainer, in World world)
+        readonly void IDisposable.Dispose()
         {
-            if (systemContainer.World == world)
-            {
-                Simulator simulator = systemContainer.simulator;
-                simulator.AddSystem<ClampNestedScissorViews>();
-                SystemContainer<RenderEngineSystem> renderEngine = simulator.AddSystem<RenderEngineSystem>();
+        }
 
-                systemContainer.Write(new RenderingSystems(renderEngine));
+        void ISystem.Start(in SystemContext context, in World world)
+        {
+            if (context.World == world)
+            {
+                context.AddSystem(new ClampNestedScissorViews());
+                SystemContainer<RenderEngineSystem> renderEngine = context.AddSystem(new RenderEngineSystem());
+                context.Write(new RenderingSystems(renderEngine));
             }
         }
 
-        void ISystem.Update(in SystemContainer systemContainer, in World world, in TimeSpan delta)
+        readonly void ISystem.Update(in SystemContext context, in World world, in TimeSpan delta)
         {
         }
 
-        void ISystem.Finish(in SystemContainer systemContainer, in World world)
+        readonly void ISystem.Finish(in SystemContext context, in World world)
         {
-            if (systemContainer.World == world)
+            if (context.World == world)
             {
-                Simulator simulator = systemContainer.simulator;
-                simulator.RemoveSystem<RenderEngineSystem>();
-                simulator.RemoveSystem<ClampNestedScissorViews>();
+                context.RemoveSystem<RenderEngineSystem>();
+                context.RemoveSystem<ClampNestedScissorViews>();
             }
         }
 
         public readonly void RegisterRenderingBackend<T>() where T : unmanaged, IRenderingBackend
         {
-            ref RenderEngineSystem system = ref renderEngine.Value;
+            RenderEngineSystem system = renderEngine;
             system.RegisterRenderingBackend<T>();
         }
     }

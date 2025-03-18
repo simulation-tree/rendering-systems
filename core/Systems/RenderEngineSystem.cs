@@ -1,5 +1,4 @@
-﻿using Collections;
-using Collections.Generic;
+﻿using Collections.Generic;
 using Materials.Components;
 using Meshes.Components;
 using Rendering.Components;
@@ -25,7 +24,7 @@ namespace Rendering.Systems
         private readonly Array<IsShader> shaderComponents;
         private readonly Array<IsMesh> meshComponents;
 
-        private RenderEngineSystem(World world)
+        public RenderEngineSystem()
         {
             knownDestinations = new();
             availableBackends = new();
@@ -37,58 +36,52 @@ namespace Rendering.Systems
             meshComponents = new();
         }
 
-        void ISystem.Start(in SystemContainer systemContainer, in World world)
+        public readonly void Dispose()
         {
-            if (systemContainer.World == world)
+            meshComponents.Dispose();
+            shaderComponents.Dispose();
+            materialComponents.Dispose();
+
+            foreach (RenderingMachine renderSystem in renderSystems.Values)
             {
-                systemContainer.Write(new RenderEngineSystem(world));
+                renderSystem.Dispose();
             }
+
+            viewportEntities.Dispose();
+            renderSystems.Dispose();
+            knownDestinations.Dispose();
+
+            foreach (RenderingBackend rendererBackend in availableBackends.Values)
+            {
+                rendererBackend.Dispose();
+            }
+
+            availableBackends.Dispose();
+            rendererGroups.Dispose();
         }
 
-        void ISystem.Update(in SystemContainer systemContainer, in World world, in TimeSpan delta)
+        void ISystem.Start(in SystemContext context, in World world)
         {
-            ComponentType destinationType = world.Schema.GetComponentType<IsDestination>();
-            ComponentType rendererType = world.Schema.GetComponentType<IsRenderer>();
-            ComponentType viewportType = world.Schema.GetComponentType<IsViewport>();
-            ComponentType materialType = world.Schema.GetComponentType<IsMaterial>();
-            ComponentType shaderType = world.Schema.GetComponentType<IsShader>();
-            ComponentType meshType = world.Schema.GetComponentType<IsMesh>();
-            TagType disabledTag = TagType.Disabled;
+        }
+
+        void ISystem.Update(in SystemContext context, in World world, in TimeSpan delta)
+        {
+            int destinationType = world.Schema.GetComponentType<IsDestination>();
+            int rendererType = world.Schema.GetComponentType<IsRenderer>();
+            int viewportType = world.Schema.GetComponentType<IsViewport>();
+            int materialType = world.Schema.GetComponentType<IsMaterial>();
+            int shaderType = world.Schema.GetComponentType<IsShader>();
+            int meshType = world.Schema.GetComponentType<IsMesh>();
             DestroyOldSystems(world);
             CreateNewSystems(world, destinationType);
-            FindViewports(world, viewportType, disabledTag);
+            FindViewports(world, viewportType);
             CollectComponents(world, materialType, shaderType, meshType);
-            FindRenderers(world, rendererType, materialType, shaderType, meshType, disabledTag);
+            FindRenderers(world, rendererType);
             Render(world, destinationType, shaderType, meshType);
         }
 
-        void ISystem.Finish(in SystemContainer systemContainer, in World world)
+        void ISystem.Finish(in SystemContext context, in World world)
         {
-            if (systemContainer.World == world)
-            {
-                meshComponents.Dispose();
-                shaderComponents.Dispose();
-                materialComponents.Dispose();
-
-                foreach (Destination key in renderSystems.Keys)
-                {
-                    ref RenderingMachine renderSystem = ref renderSystems[key];
-                    renderSystem.Dispose();
-                }
-
-                viewportEntities.Dispose();
-                renderSystems.Dispose();
-                knownDestinations.Dispose();
-
-                foreach (ASCIIText256 label in availableBackends.Keys)
-                {
-                    ref RenderingBackend rendererBackend = ref availableBackends[label];
-                    rendererBackend.Dispose();
-                }
-
-                availableBackends.Dispose();
-                rendererGroups.Dispose();
-            }
         }
 
         /// <summary>
@@ -107,7 +100,7 @@ namespace Rendering.Systems
             availableBackends.Add(label, systemCreator);
         }
 
-        private readonly void CreateNewRenderers(World world, ComponentType destinationType)
+        private readonly void CreateNewRenderers(World world, int destinationType)
         {
             Span<ASCIIText256> extensionNames = stackalloc ASCIIText256[32];
             foreach (Chunk chunk in world.Chunks)
@@ -115,7 +108,7 @@ namespace Rendering.Systems
                 if (chunk.Definition.ContainsComponent(destinationType))
                 {
                     ReadOnlySpan<uint> entities = chunk.Entities;
-                    Span<IsDestination> components = chunk.GetComponents<IsDestination>(destinationType);
+                    ComponentEnumerator<IsDestination> components = chunk.GetComponents<IsDestination>(destinationType);
                     for (int i = 0; i < entities.Length; i++)
                     {
                         ref IsDestination component = ref components[i];
@@ -145,7 +138,7 @@ namespace Rendering.Systems
             }
         }
 
-        private readonly void CollectComponents(World world, ComponentType materialType, ComponentType shaderType, ComponentType meshType)
+        private readonly void CollectComponents(World world, int materialType, int shaderType, int meshType)
         {
             int capacity = (world.MaxEntityValue + 1).GetNextPowerOf2();
             if (materialComponents.Length < capacity)
@@ -173,7 +166,7 @@ namespace Rendering.Systems
                 ReadOnlySpan<uint> entities = chunk.Entities;
                 if (definition.ContainsComponent(materialType))
                 {
-                    Span<IsMaterial> components = chunk.GetComponents<IsMaterial>(materialType);
+                    ComponentEnumerator<IsMaterial> components = chunk.GetComponents<IsMaterial>(materialType);
                     for (int i = 0; i < entities.Length; i++)
                     {
                         materialComponents[(int)entities[i]] = components[i];
@@ -182,7 +175,7 @@ namespace Rendering.Systems
 
                 if (definition.ContainsComponent(shaderType))
                 {
-                    Span<IsShader> components = chunk.GetComponents<IsShader>(shaderType);
+                    ComponentEnumerator<IsShader> components = chunk.GetComponents<IsShader>(shaderType);
                     for (int i = 0; i < entities.Length; i++)
                     {
                         shaderComponents[(int)entities[i]] = components[i];
@@ -191,7 +184,7 @@ namespace Rendering.Systems
 
                 if (definition.ContainsComponent(meshType))
                 {
-                    Span<IsMesh> components = chunk.GetComponents<IsMesh>(meshType);
+                    ComponentEnumerator<IsMesh> components = chunk.GetComponents<IsMesh>(meshType);
                     for (int i = 0; i < entities.Length; i++)
                     {
                         meshComponents[(int)entities[i]] = components[i];
@@ -200,14 +193,14 @@ namespace Rendering.Systems
             }
         }
 
-        private readonly void FindRenderers(World world, ComponentType rendererType, ComponentType materialType, ComponentType shaderType, ComponentType meshType, TagType disabledTag)
+        private readonly void FindRenderers(World world, int rendererType)
         {
             foreach (Chunk chunk in world.Chunks)
             {
-                if (chunk.Definition.ContainsComponent(rendererType) && !chunk.Definition.ContainsTag(disabledTag))
+                if (chunk.Definition.ContainsComponent(rendererType) && !chunk.Definition.ContainsTag(Schema.DisabledTagType))
                 {
                     ReadOnlySpan<uint> entities = chunk.Entities;
-                    Span<IsRenderer> components = chunk.GetComponents<IsRenderer>(rendererType);
+                    ComponentEnumerator<IsRenderer> components = chunk.GetComponents<IsRenderer>(rendererType);
                     for (int i = 0; i < entities.Length; i++)
                     {
                         ref IsRenderer component = ref components[i];
@@ -274,16 +267,16 @@ namespace Rendering.Systems
             }
         }
 
-        private readonly void FindViewports(World world, ComponentType viewportType, TagType disabledTag)
+        private readonly void FindViewports(World world, int viewportType)
         {
             //reset viewport lists
             viewportEntities.Clear();
             foreach (Chunk chunk in world.Chunks)
             {
-                if (chunk.Definition.ContainsComponent(viewportType) && !chunk.Definition.ContainsTag(disabledTag))
+                if (chunk.Definition.ContainsComponent(viewportType) && !chunk.Definition.ContainsTag(Schema.DisabledTagType))
                 {
                     ReadOnlySpan<uint> entities = chunk.Entities;
-                    Span<IsViewport> components = chunk.GetComponents<IsViewport>(viewportType);
+                    ComponentEnumerator<IsViewport> components = chunk.GetComponents<IsViewport>(viewportType);
                     for (int i = 0; i < entities.Length; i++)
                     {
                         ref IsViewport component = ref components[i];
@@ -305,7 +298,7 @@ namespace Rendering.Systems
             }
         }
 
-        private readonly void CreateNewSystems(World world, ComponentType destinationType)
+        private readonly void CreateNewSystems(World world, int destinationType)
         {
             CreateNewRenderers(world, destinationType);
 
@@ -338,7 +331,7 @@ namespace Rendering.Systems
             }
         }
 
-        private readonly void Render(World world, ComponentType destinationType, ComponentType shaderType, ComponentType meshType)
+        private readonly void Render(World world, int destinationType, int shaderType, int meshType)
         {
             foreach (Destination destination in knownDestinations)
             {
