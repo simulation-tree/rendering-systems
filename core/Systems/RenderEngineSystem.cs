@@ -365,21 +365,6 @@ namespace Rendering.Systems
                     if (containsGroups)
                     {
                         rendererGroups.Add(groups);
-                        //make sure renderer entries that no longer exist are not in this list
-                        //todo: is this needed?
-                        //foreach (RendererKey key in groups.Keys)
-                        //{
-                        //    ref List<uint> renderers = ref groups[key];
-                        //    uint rendererCount = renderers.Count;
-                        //    for (uint r = rendererCount - 1; r != uint.MaxValue; r--)
-                        //    {
-                        //        uint rendererEntity = renderers[r];
-                        //        if (!world.ContainsEntity(rendererEntity))
-                        //        {
-                        //            renderers.RemoveAt(r);
-                        //        }
-                        //    }
-                        //}
                     }
                 }
 
