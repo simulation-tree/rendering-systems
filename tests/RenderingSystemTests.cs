@@ -11,10 +11,10 @@ namespace Rendering.Systems.Tests
     {
         static RenderingSystemTests()
         {
-            TypeRegistry.Load<MeshesTypeBank>();
-            TypeRegistry.Load<MaterialsTypeBank>();
-            TypeRegistry.Load<RenderingTypeBank>();
-            TypeRegistry.Load<ShadersTypeBank>();
+            MetadataRegistry.Load<MeshesTypeBank>();
+            MetadataRegistry.Load<MaterialsTypeBank>();
+            MetadataRegistry.Load<RenderingTypeBank>();
+            MetadataRegistry.Load<ShadersTypeBank>();
         }
 
         protected override Schema CreateSchema()
