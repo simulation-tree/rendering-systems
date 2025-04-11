@@ -1,6 +1,4 @@
-﻿using Materials;
-using Meshes;
-using System;
+﻿using System;
 
 namespace Rendering
 {
@@ -11,11 +9,6 @@ namespace Rendering
         public RendererKey(uint materialEntity, uint meshEntity)
         {
             value = ((ulong)materialEntity << 32) | meshEntity;
-        }
-
-        public RendererKey(Material material, Mesh mesh)
-        {
-            value = ((ulong)material.value << 32) | mesh.value;
         }
 
         public readonly bool Equals(RendererKey other)

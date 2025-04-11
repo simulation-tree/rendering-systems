@@ -77,7 +77,7 @@ namespace Rendering.Systems
             FindViewports(world, viewportType);
             CollectComponents(world, materialType, shaderType, meshType);
             FindRenderers(world, rendererType);
-            Render(world, destinationType, shaderType, meshType);
+            Render(world, destinationType);
         }
 
         void ISystem.Finish(in SystemContext context, in World world)
@@ -195,6 +195,7 @@ namespace Rendering.Systems
 
         private readonly void FindRenderers(World world, int rendererType)
         {
+            using List<(IsRenderer renderer, IsMaterial material, uint rendererEntity, uint materialEntity)> found = new(256);
             foreach (Chunk chunk in world.Chunks)
             {
                 if (chunk.Definition.ContainsComponent(rendererType) && !chunk.Definition.ContainsTag(Schema.DisabledTagType))
@@ -213,58 +214,79 @@ namespace Rendering.Systems
                             continue; //material not yet loaded
                         }
 
-                        uint vertexShaderEntity = world.GetReference(materialEntity, materialComponent.vertexShaderReference);
-                        IsShader vertexShaderComponent = shaderComponents[(int)vertexShaderEntity];
-                        if (vertexShaderComponent == default)
-                        {
-                            continue; //vertex shader not yet loaded
-                        }
+                        found.Add((component, materialComponent, entity, materialEntity));
+                    }
+                }
+            }
 
-                        uint fragmentShaderEntity = world.GetReference(materialEntity, materialComponent.fragmentShaderReference);
-                        IsShader fragmentShaderComponent = shaderComponents[(int)fragmentShaderEntity];
-                        if (fragmentShaderComponent == default)
-                        {
-                            continue; //fragment shader not yet loaded
-                        }
+            //sort found list by render order
+            Span<(IsRenderer renderer, IsMaterial material, uint rendererEntity, uint materialEntity)> foundSpan = stackalloc (IsRenderer renderer, IsMaterial material, uint rendererEntity, uint materialEntity)[found.Count];
+            found.AsSpan().CopyTo(foundSpan);
+            foundSpan.Sort(Compare);
 
-                        rint meshReference = component.meshReference;
-                        uint meshEntity = world.GetReference(entity, meshReference);
-                        IsMesh meshComponent = meshComponents[(int)meshEntity];
-                        if (meshComponent == default)
-                        {
-                            continue; //mesh not yet loaded
-                        }
+            for (int i = 0; i < foundSpan.Length; i++)
+            {
+                (IsRenderer renderer, IsMaterial material, uint rendererEntity, uint materialEntity) = foundSpan[i];
+                uint vertexShaderEntity = world.GetReference(materialEntity, material.vertexShaderReference);
+                IsShader vertexShaderComponent = shaderComponents[(int)vertexShaderEntity];
+                if (vertexShaderComponent == default)
+                {
+                    continue; //vertex shader not yet loaded
+                }
 
-                        LayerMask renderMask = component.renderMask;
+                uint fragmentShaderEntity = world.GetReference(materialEntity, material.fragmentShaderReference);
+                IsShader fragmentShaderComponent = shaderComponents[(int)fragmentShaderEntity];
+                if (fragmentShaderComponent == default)
+                {
+                    continue; //fragment shader not yet loaded
+                }
 
-                        //for each viewport, add this renderer if it intersects with their render mak
-                        foreach (ViewportData viewport in viewportEntities)
+                rint meshReference = renderer.meshReference;
+                uint meshEntity = world.GetReference(rendererEntity, meshReference);
+                IsMesh meshComponent = meshComponents[(int)meshEntity];
+                if (meshComponent == default)
+                {
+                    continue; //mesh not yet loaded
+                }
+
+                LayerMask renderMask = renderer.renderMask;
+
+                //for each viewport, add this renderer if it intersects with their render mak
+                foreach (ViewportData viewport in viewportEntities)
+                {
+                    if (viewport.renderMask.ContainsAny(renderMask))
+                    {
+                        if (renderSystems.TryGetValue(viewport.destination, out RenderingMachine renderSystem))
                         {
-                            if (viewport.renderMask.ContainsAny(renderMask))
+                            if (!renderSystem.renderers.TryGetValue(viewport.entity, out Dictionary<RendererKey, List<uint>> groups))
                             {
-                                if (renderSystems.TryGetValue(viewport.destination, out RenderingMachine renderSystem))
-                                {
-                                    if (!renderSystem.renderers.TryGetValue(viewport.entity, out Dictionary<RendererKey, List<uint>> groups))
-                                    {
-                                        groups = new();
-                                        renderSystem.renderers.Add(viewport.entity, groups);
-                                    }
-
-                                    RendererKey key = new(materialEntity, meshEntity);
-                                    if (!groups.TryGetValue(key, out List<uint> renderers))
-                                    {
-                                        renderers = new();
-                                        groups.Add(key, renderers);
-                                        renderSystem.infos.AddOrSet(key, new(materialEntity, meshEntity, vertexShaderEntity, fragmentShaderEntity));
-                                    }
-
-                                    renderers.Add(entity);
-                                }
+                                groups = new();
+                                renderSystem.renderers.Add(viewport.entity, groups);
                             }
+
+                            RendererKey key = new(materialEntity, meshEntity);
+                            if (!groups.TryGetValue(key, out List<uint> renderers))
+                            {
+                                renderers = new();
+                                groups.Add(key, renderers);
+                                renderSystem.infos.AddOrSet(key, new(materialEntity, meshEntity, vertexShaderEntity, fragmentShaderEntity));
+                            }
+
+                            renderers.Add(rendererEntity);
                         }
                     }
                 }
             }
+        }
+
+        private static int Compare((IsRenderer renderer, IsMaterial material, uint rendererEntity, uint materialEntity) x, (IsRenderer renderer, IsMaterial material, uint rendererEntity, uint materialEntity) y)
+        {
+            return x.material.renderOrder.CompareTo(y.material.renderOrder);
+        }
+
+        private static int Compare((Viewport viewport, sbyte renderOrder) x, (Viewport viewport, sbyte renderOrder) y)
+        {
+            return x.renderOrder.CompareTo(y.renderOrder);
         }
 
         private readonly void FindViewports(World world, int viewportType)
@@ -331,8 +353,9 @@ namespace Rendering.Systems
             }
         }
 
-        private readonly void Render(World world, int destinationType, int shaderType, int meshType)
+        private readonly void Render(World world, int destinationType)
         {
+            Span<(Viewport viewport, sbyte renderOrder)> viewports = stackalloc (Viewport, sbyte)[64];
             foreach (Destination destination in knownDestinations)
             {
                 if (destination.world != world)
@@ -359,8 +382,17 @@ namespace Rendering.Systems
                     continue;
                 }
 
-                foreach (Viewport viewport in renderSystem.viewports)
+                int viewportCount = renderSystem.viewports.Count;
+                for (int i = 0; i < viewportCount; i++)
                 {
+                    Viewport viewport = renderSystem.viewports[i];
+                    viewports[i] = (viewport, viewport.Order);
+                }
+
+                viewports.Slice(0, viewportCount).Sort(Compare);
+                for (int i = 0; i < viewportCount; i++)
+                {
+                    Viewport viewport = viewports[i].viewport;
                     ref Dictionary<RendererKey, List<uint>> groups = ref renderSystem.renderers.TryGetValue(viewport, out bool containsGroups);
                     if (containsGroups)
                     {
