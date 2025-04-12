@@ -17,7 +17,7 @@ namespace Rendering
             backend.Finish();
         }
 
-        public static (MemoryAddress renderer, MemoryAddress instance) Create<T>(ref T backend, in Destination destination, in Span<ASCIIText256> extensionNames) where T : unmanaged, IRenderingBackend
+        public static (MemoryAddress renderer, MemoryAddress instance) Create<T>(ref T backend, in Destination destination, in ReadOnlySpan<DestinationExtension> extensionNames) where T : unmanaged, IRenderingBackend
         {
             return backend.Create(destination, extensionNames);
         }

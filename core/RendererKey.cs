@@ -11,6 +11,11 @@ namespace Rendering
             value = ((ulong)materialEntity << 32) | meshEntity;
         }
 
+        public readonly override string ToString()
+        {
+            return value.ToString();
+        }
+
         public readonly bool Equals(RendererKey other)
         {
             return value == other.value;

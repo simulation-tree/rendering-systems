@@ -24,7 +24,7 @@ namespace Rendering.Functions
         }
 #endif
 
-        public readonly (MemoryAddress renderer, MemoryAddress instance) Invoke(MemoryAddress backend, Destination destination, Span<ASCIIText256> extensionNames)
+        public readonly (MemoryAddress renderer, MemoryAddress instance) Invoke(MemoryAddress backend, Destination destination, ReadOnlySpan<DestinationExtension> extensionNames)
         {
             Input input = new(backend, destination, extensionNames);
             Output result = function(input);
@@ -36,12 +36,12 @@ namespace Rendering.Functions
             public readonly MemoryAddress backend;
             public readonly Destination destination;
 
-            private readonly ASCIIText256* extensionNames;
+            private readonly void* extensionNames;
             private readonly int length;
 
-            public readonly Span<ASCIIText256> ExtensionNames => new(extensionNames, length);
+            public readonly ReadOnlySpan<DestinationExtension> ExtensionNames => new(extensionNames, length);
 
-            public Input(MemoryAddress backend, Destination destination, Span<ASCIIText256> extensionNames)
+            public Input(MemoryAddress backend, Destination destination, ReadOnlySpan<DestinationExtension> extensionNames)
             {
                 this.backend = backend;
                 this.destination = destination;

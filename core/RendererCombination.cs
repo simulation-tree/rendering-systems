@@ -4,19 +4,19 @@ namespace Rendering
 {
     public struct RendererCombination : IEquatable<RendererCombination>
     {
-        public uint material;
-        public uint mesh;
-        public uint vertexShader;
-        public uint fragmentShader;
+        public uint materialEntity;
+        public uint meshEntity;
+        public uint vertexShaderEntity;
+        public uint fragmentShaderEntity;
 
-        public readonly ulong Key => ((ulong)material << 32) | mesh;
+        public readonly ulong Key => ((ulong)materialEntity << 32) | meshEntity;
 
-        public RendererCombination(uint material, uint mesh, uint vertexShader, uint fragmentShader)
+        public RendererCombination(uint materialEntity, uint meshEntity, uint vertexShaderEntity, uint fragmentShaderEntity)
         {
-            this.material = material;
-            this.mesh = mesh;
-            this.vertexShader = vertexShader;
-            this.fragmentShader = fragmentShader;
+            this.materialEntity = materialEntity;
+            this.meshEntity = meshEntity;
+            this.vertexShaderEntity = vertexShaderEntity;
+            this.fragmentShaderEntity = fragmentShaderEntity;
         }
 
         public readonly override bool Equals(object? obj)
@@ -26,7 +26,7 @@ namespace Rendering
 
         public readonly bool Equals(RendererCombination other)
         {
-            return material == other.material && mesh == other.mesh && vertexShader == other.vertexShader && fragmentShader == other.fragmentShader;
+            return materialEntity == other.materialEntity && meshEntity == other.meshEntity && vertexShaderEntity == other.vertexShaderEntity && fragmentShaderEntity == other.fragmentShaderEntity;
         }
 
         public readonly override int GetHashCode()
@@ -34,10 +34,10 @@ namespace Rendering
             unchecked
             {
                 int hash = 17;
-                hash = hash * 23 + (int)material;
-                hash = hash * 23 + (int)mesh;
-                hash = hash * 23 + (int)vertexShader;
-                hash = hash * 23 + (int)fragmentShader;
+                hash = hash * 23 + (int)materialEntity;
+                hash = hash * 23 + (int)meshEntity;
+                hash = hash * 23 + (int)vertexShaderEntity;
+                hash = hash * 23 + (int)fragmentShaderEntity;
                 return hash;
             }
         }

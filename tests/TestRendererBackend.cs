@@ -23,7 +23,7 @@ namespace Rendering.Systems.Tests
             initialized = false;
         }
 
-        (MemoryAddress renderer, MemoryAddress instance) IRenderingBackend.Create(in Destination destination, in ReadOnlySpan<ASCIIText256> extensionNames)
+        (MemoryAddress renderer, MemoryAddress instance) IRenderingBackend.Create(in Destination destination, in ReadOnlySpan<DestinationExtension> extensionNames)
         {
             MemoryAddress renderer = MemoryAddress.AllocateValue(new TestRenderer(destination, extensionNames));
             renderingMachines.Add(renderer);
@@ -76,7 +76,7 @@ namespace Rendering.Systems.Tests
     public struct TestRenderer : IDisposable
     {
         public readonly Destination destination;
-        public readonly Array<ASCIIText256> extensionNames;
+        public readonly Array<DestinationExtension> extensionNames;
         public readonly List<uint> entities;
         public Vector4 clearColor;
         public MaterialData material;
@@ -86,7 +86,7 @@ namespace Rendering.Systems.Tests
         public MemoryAddress surface;
         public bool finishedRendering;
 
-        public TestRenderer(Destination destination, ReadOnlySpan<ASCIIText256> extensionNames)
+        public TestRenderer(Destination destination, ReadOnlySpan<DestinationExtension> extensionNames)
         {
             this.destination = destination;
             this.extensionNames = new(extensionNames);

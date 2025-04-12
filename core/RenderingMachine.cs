@@ -1,5 +1,4 @@
-﻿using Collections.Generic;
-using Simulation;
+﻿using Simulation;
 using System;
 using System.Numerics;
 using Unmanaged;
@@ -9,12 +8,10 @@ namespace Rendering.Systems
     /// <summary>
     /// Represents a handler of <see cref="IRenderingBackend"/> functions for a specific <see cref="Destination"/>.
     /// </summary>
-    public struct RenderingMachine : IDisposable
+    internal struct RenderingMachine : IDisposable
     {
+        public readonly RendererGroups rendererGroups;
         private bool hasSurface;
-        public readonly List<Viewport> viewports;
-        public readonly Dictionary<Viewport, Dictionary<RendererKey, List<uint>>> renderers;
-        public readonly Dictionary<RendererKey, RendererCombination> infos;
 
         private readonly MemoryAddress allocation;
         private readonly RenderingBackend backend;
@@ -31,34 +28,16 @@ namespace Rendering.Systems
 
         internal RenderingMachine(MemoryAddress allocation, RenderingBackend backend)
         {
+            rendererGroups = new();
             this.allocation = allocation;
             this.backend = backend;
             hasSurface = false;
-
-            viewports = new();
-            renderers = new();
-            infos = new();
         }
 
         public readonly void Dispose()
         {
             backend.dispose.Invoke(backend.allocation, allocation);
-            infos.Dispose();
-            viewports.Dispose();
-
-            foreach (Viewport viewport in renderers.Keys)
-            {
-                Dictionary<RendererKey, List<uint>> groups = renderers[viewport];
-                foreach (RendererKey hash in groups.Keys)
-                {
-                    List<uint> renderers = groups[hash];
-                    renderers.Dispose();
-                }
-
-                groups.Dispose();
-            }
-
-            renderers.Dispose();
+            rendererGroups.Dispose();
         }
 
         public void SurfaceCreated(MemoryAddress surface)

@@ -1,10 +1,10 @@
 ﻿#pragma warning disable CS0465 //gc isnt even used
-using Rendering.Functions;
 using Rendering.Components;
-using Unmanaged;
-using System.Numerics;
+using Rendering.Functions;
 using Simulation;
 using System;
+using System.Numerics;
+using Unmanaged;
 
 namespace Rendering
 {
@@ -44,8 +44,8 @@ namespace Rendering
         /// </para>
         /// </summary>
         /// <returns>The renderer that handles render functions, and the instance originating from the API in use.</returns>
-        (MemoryAddress renderer, MemoryAddress instance) Create(in Destination destination, in ReadOnlySpan<ASCIIText256> extensionNames);
-        
+        (MemoryAddress renderer, MemoryAddress instance) Create(in Destination destination, in ReadOnlySpan<DestinationExtension> extensionNames);
+
         /// <summary>
         /// Disposes a previously created renderer system.
         /// </summary>
