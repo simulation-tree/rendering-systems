@@ -9,6 +9,8 @@ namespace Rendering.Systems.Tests
 {
     public abstract class RenderingSystemTests : SimulationTests
     {
+        //todo: test for multiple viewports (and having them sorted)
+        //todo: test for customizing renderer entities sorted by their material
         static RenderingSystemTests()
         {
             MetadataRegistry.Load<MeshesTypeBank>();
