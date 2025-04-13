@@ -232,6 +232,7 @@ namespace Rendering.Systems
                         if (contains)
                         {
                             viewports[viewportCount++] = (viewportEntity, component, renderingMachine);
+                            renderingMachine.rendererGroups.Clear();
                         }
                         else
                         {
@@ -273,7 +274,6 @@ namespace Rendering.Systems
                     }
                 }
 
-                renderingMachine.rendererGroups.Clear();
                 Span<(uint rendererEntity, uint materialEntity, IsMaterial material)> rendererEntities = viewportGroup.Renderers;
                 rendererEntities.Sort(SortRenderersByMaterialOrder);
 
