@@ -353,15 +353,10 @@ namespace Rendering.Systems
                 ref RenderingMachine renderingMachine = ref renderingMachines[destination];
                 if (!renderingMachine.hasSurface)
                 {
-                    renderingMachine.hasSurface = true;
-                    if (destination.ContainsComponent(surfaceInUseType))
+                    if (destination.TryGetComponent(surfaceInUseType, out SurfaceInUse surfaceInUse))
                     {
-                        SurfaceInUse surfaceInUse = destination.GetComponent<SurfaceInUse>(surfaceInUseType);
+                        renderingMachine.hasSurface = true;
                         renderingMachine.SurfaceCreated(surfaceInUse.value);
-                    }
-                    else
-                    {
-                        Trace.WriteLine($"Could not notify surface creation for destination `{destination}` because it does not have a surface in use component");
                     }
                 }
             }
