@@ -1,5 +1,4 @@
-﻿#pragma warning disable CS0465 //gc isnt even used
-using Rendering.Components;
+﻿using Rendering.Components;
 using Rendering.Functions;
 using Simulation;
 using System;
@@ -44,32 +43,32 @@ namespace Rendering
         /// </para>
         /// </summary>
         /// <returns>The renderer that handles render functions, and the instance originating from the API in use.</returns>
-        (MemoryAddress renderer, MemoryAddress instance) Create(in Destination destination, in ReadOnlySpan<DestinationExtension> extensionNames);
+        (MemoryAddress machine, MemoryAddress instance) Create(in Destination destination, in ReadOnlySpan<DestinationExtension> extensionNames);
 
         /// <summary>
         /// Disposes a previously created renderer system.
         /// </summary>
-        void Dispose(in MemoryAddress renderer);
+        void Dispose(in MemoryAddress machine, in MemoryAddress instance);
 
         /// <summary>
         /// Callback when a surface has been created for a renderer.
         /// </summary>
-        void SurfaceCreated(in MemoryAddress renderer, MemoryAddress surface);
+        void SurfaceCreated(in MemoryAddress machine, MemoryAddress surface);
 
         /// <summary>
         /// Called to prepare for rendering.
         /// </summary>
-        StatusCode BeginRender(in MemoryAddress renderer, in Vector4 clearColor);
+        StatusCode BeginRender(in MemoryAddress machine, in Vector4 clearColor);
 
         /// <summary>
         /// Performs rendering of a single frame with the <see cref="Destination"/>
         /// the renderer was created with.
         /// </summary>
-        void Render(in MemoryAddress renderer, in ReadOnlySpan<uint> entities, in MaterialData material, in MeshData mesh, in VertexShaderData vertexShader, in FragmentShaderData fragmentShader);
+        void Render(in MemoryAddress machine, in uint materialEntity, in ushort materialVersion, in ReadOnlySpan<RenderEntity> entities);
 
         /// <summary>
         /// Finishes rendering a frame.
         /// </summary>
-        void EndRender(in MemoryAddress renderer);
+        void EndRender(in MemoryAddress machine);
     }
 }

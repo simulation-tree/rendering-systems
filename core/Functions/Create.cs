@@ -24,11 +24,11 @@ namespace Rendering.Functions
         }
 #endif
 
-        public readonly (MemoryAddress renderer, MemoryAddress instance) Invoke(MemoryAddress backend, Destination destination, ReadOnlySpan<DestinationExtension> extensionNames)
+        public readonly (MemoryAddress machine, MemoryAddress instance) Invoke(MemoryAddress backend, Destination destination, ReadOnlySpan<DestinationExtension> extensionNames)
         {
             Input input = new(backend, destination, extensionNames);
             Output result = function(input);
-            return (result.renderer, result.instance);
+            return (result.machine, result.instance);
         }
 
         public readonly struct Input
@@ -52,12 +52,12 @@ namespace Rendering.Functions
 
         public readonly struct Output
         {
-            public readonly MemoryAddress renderer;
+            public readonly MemoryAddress machine;
             public readonly MemoryAddress instance;
 
-            public Output(MemoryAddress renderer, MemoryAddress instance)
+            public Output(MemoryAddress machine, MemoryAddress instance)
             {
-                this.renderer = renderer;
+                this.machine = machine;
                 this.instance = instance;
             }
         }

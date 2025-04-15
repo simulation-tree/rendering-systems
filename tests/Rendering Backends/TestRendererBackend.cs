@@ -8,6 +8,7 @@ namespace Rendering.Systems.Tests
 {
     public readonly partial struct TestRendererBackend : IRenderingBackend
     {
+        public static MemoryAddress library;
         public static bool initialized;
         public static readonly System.Collections.Generic.List<MemoryAddress> renderingMachines = new();
 
@@ -16,26 +17,31 @@ namespace Rendering.Systems.Tests
         void IRenderingBackend.Start()
         {
             initialized = true;
+            library = MemoryAddress.AllocateValue(32);
         }
 
         void IRenderingBackend.Finish()
         {
+            library.Dispose();
             initialized = false;
         }
 
-        (MemoryAddress renderer, MemoryAddress instance) IRenderingBackend.Create(in Destination destination, in ReadOnlySpan<DestinationExtension> extensionNames)
+        (MemoryAddress machine, MemoryAddress instance) IRenderingBackend.Create(in Destination destination, in ReadOnlySpan<DestinationExtension> extensionNames)
         {
-            MemoryAddress renderer = MemoryAddress.AllocateValue(new TestRenderer(destination, extensionNames));
-            renderingMachines.Add(renderer);
-            return (renderer, renderer);
+            MemoryAddress instance = MemoryAddress.AllocateValue(1000);
+            TestRenderer machine = new(destination, extensionNames, instance);
+            MemoryAddress machineAddress = MemoryAddress.AllocateValue(machine);
+            renderingMachines.Add(machineAddress);
+            return (machineAddress, instance);
         }
 
-        void IRenderingBackend.Dispose(in MemoryAddress renderer)
+        void IRenderingBackend.Dispose(in MemoryAddress renderer, in MemoryAddress instance)
         {
+            renderingMachines.Remove(renderer);
             ref TestRenderer testRenderer = ref renderer.Read<TestRenderer>();
             testRenderer.Dispose();
-            renderingMachines.Remove(renderer);
             renderer.Dispose();
+            instance.Dispose();
         }
 
         void IRenderingBackend.SurfaceCreated(in MemoryAddress renderer, MemoryAddress surface)
@@ -49,21 +55,17 @@ namespace Rendering.Systems.Tests
             ref TestRenderer testRenderer = ref renderer.Read<TestRenderer>();
             testRenderer.clearColor = clearColor;
             testRenderer.entities.Clear();
-            testRenderer.material = default;
-            testRenderer.mesh = default;
-            testRenderer.vertexShader = default;
-            testRenderer.fragmentShader = default;
+            testRenderer.materialEntity = default;
+            testRenderer.materialVersion = default;
             return StatusCode.Continue;
         }
 
-        void IRenderingBackend.Render(in MemoryAddress renderer, in ReadOnlySpan<uint> entities, in MaterialData material, in MeshData mesh, in VertexShaderData vertexShader, in FragmentShaderData fragmentShader)
+        void IRenderingBackend.Render(in MemoryAddress renderer, in uint materialEntity, in ushort materialVersion, in ReadOnlySpan<RenderEntity> entities)
         {
             ref TestRenderer testRenderer = ref renderer.Read<TestRenderer>();
+            testRenderer.materialEntity = materialEntity;
+            testRenderer.materialVersion = materialVersion;
             testRenderer.entities.AddRange(entities);
-            testRenderer.material = material;
-            testRenderer.mesh = mesh;
-            testRenderer.vertexShader = vertexShader;
-            testRenderer.fragmentShader = fragmentShader;
         }
 
         void IRenderingBackend.EndRender(in MemoryAddress renderer)
@@ -77,19 +79,19 @@ namespace Rendering.Systems.Tests
     {
         public readonly Destination destination;
         public readonly Array<DestinationExtension> extensionNames;
-        public readonly List<uint> entities;
+        public readonly List<RenderEntity> entities;
+        public readonly MemoryAddress instance;
+        public uint materialEntity;
+        public ushort materialVersion;
         public Vector4 clearColor;
-        public MaterialData material;
-        public MeshData mesh;
-        public VertexShaderData vertexShader;
-        public FragmentShaderData fragmentShader;
         public MemoryAddress surface;
         public bool finishedRendering;
 
-        public TestRenderer(Destination destination, ReadOnlySpan<DestinationExtension> extensionNames)
+        public TestRenderer(Destination destination, ReadOnlySpan<DestinationExtension> extensionNames, MemoryAddress instance)
         {
             this.destination = destination;
             this.extensionNames = new(extensionNames);
+            this.instance = instance;
             entities = new();
         }
 

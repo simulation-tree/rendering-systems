@@ -1,4 +1,5 @@
-﻿using Simulation;
+﻿using Collections.Generic;
+using Simulation;
 using System;
 using System.Numerics;
 using Unmanaged;
@@ -10,13 +11,12 @@ namespace Rendering.Systems
     /// </summary>
     internal struct RenderingMachine : IDisposable
     {
-        public readonly RendererGroups rendererGroups;
-        private bool hasSurface;
+        public readonly Dictionary<uint, ViewportGroup> viewportGroups;
+        public bool hasSurface;
 
-        private readonly MemoryAddress allocation;
         private readonly RenderingBackend backend;
-
-        public readonly bool IsSurfaceAvailable => hasSurface;
+        private readonly MemoryAddress machine;
+        private readonly MemoryAddress instance;
 
 #if NET
         [Obsolete("Default constructor not supported", true)]
@@ -26,39 +26,45 @@ namespace Rendering.Systems
         }
 #endif
 
-        internal RenderingMachine(MemoryAddress allocation, RenderingBackend backend)
+        internal RenderingMachine(RenderingBackend backend, MemoryAddress machine, MemoryAddress instance)
         {
-            rendererGroups = new();
-            this.allocation = allocation;
+            viewportGroups = new();
             this.backend = backend;
+            this.machine = machine;
+            this.instance = instance;
             hasSurface = false;
         }
 
         public readonly void Dispose()
         {
-            backend.dispose.Invoke(backend.allocation, allocation);
-            rendererGroups.Dispose();
+            backend.dispose.Invoke(backend.allocation, machine, instance);
+
+            foreach (ViewportGroup group in viewportGroups.Values)
+            {
+                group.Dispose();
+            }
+
+            viewportGroups.Dispose();
         }
 
-        public void SurfaceCreated(MemoryAddress surface)
+        public readonly void SurfaceCreated(MemoryAddress surface)
         {
-            backend.surfaceCreated.Invoke(backend.allocation, allocation, surface);
-            hasSurface = true;
+            backend.surfaceCreated.Invoke(backend.allocation, machine, surface);
         }
 
         public readonly StatusCode BeginRender(Vector4 clearColor)
         {
-            return backend.beginRender.Invoke(backend.allocation, allocation, clearColor);
+            return backend.beginRender.Invoke(backend.allocation, machine, clearColor);
         }
 
-        public readonly void Render(ReadOnlySpan<uint> renderers, MaterialData material, MeshData mesh, VertexShaderData vertexShader, FragmentShaderData fragmentShader)
+        public readonly void Render(uint materialEntity, ushort materialVersion, ReadOnlySpan<RenderEntity> renderers)
         {
-            backend.render.Invoke(backend.allocation, allocation, renderers, material, mesh, vertexShader, fragmentShader);
+            backend.render.Invoke(backend.allocation, machine, materialEntity, materialVersion, renderers);
         }
 
         public readonly void EndRender()
         {
-            backend.endRender.Invoke(backend.allocation, allocation);
+            backend.endRender.Invoke(backend.allocation, machine);
         }
     }
 }

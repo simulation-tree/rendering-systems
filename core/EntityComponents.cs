@@ -4,7 +4,7 @@ using Rendering.Components;
 using Shaders.Components;
 using System;
 
-namespace Rendering.Systems
+namespace Rendering
 {
     internal struct EntityComponents : IEquatable<EntityComponents>
     {
