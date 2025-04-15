@@ -65,7 +65,8 @@ namespace Rendering.Systems
             int materialType = schema.GetComponentType<IsMaterial>();
             int shaderType = schema.GetComponentType<IsShader>();
             int meshType = schema.GetComponentType<IsMesh>();
-            int rendererInstanceType = schema.GetComponentType<RendererInstanceInUse>();
+            int surfaceInUseType = schema.GetComponentType<SurfaceInUse>();
+            int rendererInstanceInUseType = schema.GetComponentType<RendererInstanceInUse>();
             int destinationExtensionType = schema.GetArrayType<DestinationExtension>();
             int pluginType = schema.GetComponentType<RenderEnginePluginFunction>();
             if (context.IsSimulatorWorld(world))
@@ -74,10 +75,11 @@ namespace Rendering.Systems
             }
 
             DestroyOldSystems(world);
-            CreateNewSystems(world, destinationType, rendererInstanceType, destinationExtensionType);
+            CreateRenderMachines(world, destinationType, rendererInstanceInUseType, destinationExtensionType);
+            CreateSurfaces(world, surfaceInUseType);
             CollectComponents(world, rendererType, materialType, shaderType, meshType);
             CollectRenderers(world, viewportType);
-            Render(world, destinationType);
+            Render(world, destinationType, surfaceInUseType);
         }
 
         readonly void ISystem.Finish(in SystemContext context, in World world)
@@ -101,7 +103,7 @@ namespace Rendering.Systems
             availableBackends.Add(hash, systemCreator);
         }
 
-        private readonly void CreateNewRenderers(World world, int destinationType, int rendererInstanceType, int destinationExtensionType)
+        private readonly void CreateRenderMachines(World world, int destinationType, int rendererInstanceType, int destinationExtensionType)
         {
             foreach (Chunk chunk in world.Chunks)
             {
@@ -113,7 +115,7 @@ namespace Rendering.Systems
                     for (int i = 0; i < entities.Length; i++)
                     {
                         ref IsDestination component = ref components[i];
-                        Destination entity = new Entity(world, entities[i]).As<Destination>();
+                        Destination entity = Entity.Get<Destination>(world, entities[i]);
                         if (knownDestinations.Contains(entity))
                         {
                             return;
@@ -141,7 +143,7 @@ namespace Rendering.Systems
             }
             else
             {
-                throw new InvalidOperationException($"Unknown renderer label `{label}`");
+                throw new InvalidOperationException($"Unknown renderer label `{label}`, no rendering backends available to handle it");
             }
         }
 
@@ -244,7 +246,6 @@ namespace Rendering.Systems
                             }
 
                             viewportGroup.order = viewport.order;
-
                             LayerMask viewportMask = viewport.renderMask;
                             for (uint entity = 1; entity < entityComponents.Length; entity++)
                             {
@@ -339,10 +340,8 @@ namespace Rendering.Systems
             }
         }
 
-        private readonly void CreateNewSystems(World world, int destinationType, int rendererInstanceType, int destinationExtensionType)
+        private readonly void CreateSurfaces(World world, int surfaceInUseType)
         {
-            CreateNewRenderers(world, destinationType, rendererInstanceType, destinationExtensionType);
-
             foreach (Destination destination in knownDestinations)
             {
                 if (destination.world != world)
@@ -350,24 +349,32 @@ namespace Rendering.Systems
                     continue;
                 }
 
-                //notify that surface has been created
+                //notify the entity that surface has been created
                 ref RenderingMachine renderingMachine = ref renderingMachines[destination];
-                if (!renderingMachine.hasSurface && destination.TryGetSurfaceInUse(out MemoryAddress surface))
+                if (!renderingMachine.hasSurface)
                 {
                     renderingMachine.hasSurface = true;
-                    renderingMachine.SurfaceCreated(surface);
+                    if (destination.ContainsComponent(surfaceInUseType))
+                    {
+                        SurfaceInUse surfaceInUse = destination.GetComponent<SurfaceInUse>(surfaceInUseType);
+                        renderingMachine.SurfaceCreated(surfaceInUse.value);
+                    }
+                    else
+                    {
+                        Trace.WriteLine($"Could not notify surface creation for destination `{destination}` because it does not have a surface in use component");
+                    }
                 }
             }
         }
 
-        private readonly void Render(World world, int destinationType)
+        private readonly void Render(World world, int destinationType, int surfaceInUseType)
         {
             ReadOnlySpan<Destination> knownDestinations = this.knownDestinations.AsSpan();
             foreach (Destination destination in knownDestinations)
             {
                 if (destination.world == world)
                 {
-                    if (!destination.ContainsComponent<SurfaceInUse>())
+                    if (!destination.ContainsComponent(surfaceInUseType))
                     {
                         continue; //no surface to render to yet
                     }
@@ -442,21 +449,6 @@ namespace Rendering.Systems
             }
         }
 
-        private readonly uint GetMaterialVersion(uint entity)
-        {
-            return entityComponents[(int)entity].material.version;
-        }
-
-        private readonly uint GetMeshVersion(uint entity)
-        {
-            return entityComponents[(int)entity].mesh.version;
-        }
-
-        private readonly uint GetShaderVersion(uint entity)
-        {
-            return entityComponents[(int)entity].shader.version;
-        }
-
         private readonly void DestroyOldSystems(World world)
         {
             for (int i = knownDestinations.Count - 1; i >= 0; i--)
@@ -469,17 +461,12 @@ namespace Rendering.Systems
 
                 if (destination.IsDestroyed)
                 {
-                    renderingMachines.Remove(destination, out RenderingMachine destinationRenderer);
-                    destinationRenderer.Dispose();
+                    renderingMachines.Remove(destination, out RenderingMachine machine);
+                    machine.Dispose();
                     knownDestinations.RemoveAt(i);
                     Trace.WriteLine($"Removed render system for destination `{destination}`");
                 }
             }
-        }
-
-        private static int SortViewportsByViewportOrder((uint, IsViewport viewport, RenderingMachine) x, (uint, IsViewport viewport, RenderingMachine) y)
-        {
-            return x.viewport.order.CompareTo(y.viewport.order);
         }
 
         private static int SortByViewportOrder((uint, ViewportGroup group) x, (uint, ViewportGroup group) y)
