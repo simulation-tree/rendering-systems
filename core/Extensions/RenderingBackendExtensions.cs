@@ -40,7 +40,7 @@ namespace Rendering
 
         public static void Render<T>(ref T backend, in Render.Input input) where T : unmanaged, IRenderingBackend
         {
-            backend.Render(input.machine, input.materialEntity, input.materialVersion, input.Entities);
+            backend.Render(input.machine, input.renderGroup, input.Entities);
         }
 
         public static void EndRender<T>(ref T backend, in MemoryAddress machine) where T : unmanaged, IRenderingBackend

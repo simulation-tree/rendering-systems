@@ -6,7 +6,7 @@ namespace Rendering.Systems
     internal struct ViewportGroup : IDisposable
     {
         public sbyte order;
-        public readonly Dictionary<MaterialData, List<RenderEntity>> map;
+        public readonly Dictionary<sbyte, List<RenderEntity>> map;
 
         public ViewportGroup()
         {
@@ -21,6 +21,14 @@ namespace Rendering.Systems
             }
 
             map.Dispose();
+        }
+
+        public readonly void Reset()
+        {
+            foreach (List<RenderEntity> renderEntities in map.Values)
+            {
+                renderEntities.Clear();
+            }
         }
     }
 }

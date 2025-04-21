@@ -204,30 +204,18 @@ namespace Rendering.Systems
 
         private readonly void CollectRenderers(World world, int viewportType)
         {
-            //reset lists
-            foreach (RenderingMachine renderingMachine in renderingMachines.Values)
-            {
-                foreach (ViewportGroup group in renderingMachine.viewportGroups.Values)
-                {
-                    foreach (List<RenderEntity> renderEntities in group.map.Values)
-                    {
-                        renderEntities.Clear();
-                    }
-                }
-            }
-
             //collect renderers and store them with the viewports that they render to
             foreach (Chunk chunk in world.Chunks)
             {
                 Definition definition = chunk.Definition;
                 if (definition.ContainsComponent(viewportType) && !definition.ContainsTag(Schema.DisabledTagType))
                 {
-                    ReadOnlySpan<uint> entities = chunk.Entities;
-                    ComponentEnumerator<IsViewport> components = chunk.GetComponents<IsViewport>(viewportType);
-                    for (int i = 0; i < entities.Length; i++)
+                    ReadOnlySpan<uint> viewportEntities = chunk.Entities;
+                    ComponentEnumerator<IsViewport> viewportComponents = chunk.GetComponents<IsViewport>(viewportType);
+                    for (int i = 0; i < viewportEntities.Length; i++)
                     {
-                        uint viewportEntity = entities[i];
-                        IsViewport viewport = components[i];
+                        uint viewportEntity = viewportEntities[i];
+                        IsViewport viewport = viewportComponents[i];
                         uint destinationEntity = world.GetReference(viewportEntity, viewport.destinationReference);
                         if (!world.ContainsEntity(destinationEntity))
                         {
@@ -243,6 +231,10 @@ namespace Rendering.Systems
                             {
                                 viewportGroup = ref renderingMachine.viewportGroups.Add(viewportEntity);
                                 viewportGroup = new();
+                            }
+                            else
+                            {
+                                viewportGroup.Reset();
                             }
 
                             viewportGroup.order = viewport.order;
@@ -297,13 +289,12 @@ namespace Rendering.Systems
                                                 //instead of per viewport
                                                 IsShader vertexShader = entityComponents[(int)vertexShaderEntity].shader;
                                                 IsShader fragmentShader = entityComponents[(int)fragmentShaderEntity].shader;
-                                                RenderEntity renderEntity = new(entity, meshEntity, vertexShaderEntity, fragmentShaderEntity, mesh.version, vertexShader.version, fragmentShader.version);
-                                                MaterialData materialData = new(materialEntity, material);
-                                                ref List<RenderEntity> renderEntities = ref viewportGroup.map.TryGetValue(materialData, out bool containsMaterialGroup);
+                                                RenderEntity renderEntity = new(entity, meshEntity, materialEntity, vertexShaderEntity, fragmentShaderEntity, mesh.version, vertexShader.version, fragmentShader.version);
+                                                ref List<RenderEntity> renderEntities = ref viewportGroup.map.TryGetValue(material.renderGroup, out bool containsMaterialGroup);
                                                 if (!containsMaterialGroup)
                                                 {
-                                                    renderEntities = ref viewportGroup.map.Add(materialData);
-                                                    renderEntities = new();
+                                                    renderEntities = ref viewportGroup.map.Add(material.renderGroup);
+                                                    renderEntities = new(256);
                                                 }
 
                                                 renderEntities.Add(renderEntity);
@@ -418,11 +409,11 @@ namespace Rendering.Systems
         private readonly void RenderViewport(World world, RenderingMachine renderingMachine, uint viewportEntity, ViewportGroup viewportGroup)
         {
             //sort material groups by their declared order
-            Span<(MaterialData materialData, List<RenderEntity> renderEntities)> materialGroups = stackalloc (MaterialData, List<RenderEntity>)[viewportGroup.map.Count];
+            Span<(sbyte renderGroup, List<RenderEntity> renderEntities)> materialGroups = stackalloc (sbyte, List<RenderEntity>)[viewportGroup.map.Count];
             int materialCount = 0;
-            foreach ((MaterialData materialData, List<RenderEntity> renderEntities) in viewportGroup.map)
+            foreach ((sbyte renderGroup, List<RenderEntity> renderEntities) in viewportGroup.map)
             {
-                materialGroups[materialCount++] = (materialData, renderEntities);
+                materialGroups[materialCount++] = (renderGroup, renderEntities);
             }
 
             materialGroups.Sort(SortByMaterialOrder);
@@ -432,15 +423,14 @@ namespace Rendering.Systems
             for (int m = 0; m < materialCount; m++)
             {
                 //preprocess
-                (MaterialData materialData, List<RenderEntity> renderEntities) = materialGroups[m];
-                uint materialEntity = materialData.entity;
+                (sbyte renderGroup, List<RenderEntity> renderEntities) = materialGroups[m];
                 Span<RenderEntity> entities = renderEntities.AsSpan();
                 for (int p = 0; p < pluginFunctions.Length; p++)
                 {
-                    pluginFunctions[p].Invoke(world, materialEntity, entities);
+                    pluginFunctions[p].Invoke(world, renderGroup, entities);
                 }
 
-                renderingMachine.Render(materialEntity, materialData.version, entities);
+                renderingMachine.Render(renderGroup, entities);
             }
         }
 
@@ -469,9 +459,9 @@ namespace Rendering.Systems
             return x.group.order.CompareTo(y.group.order);
         }
 
-        private static int SortByMaterialOrder((MaterialData material, List<RenderEntity>) x, (MaterialData material, List<RenderEntity>) y)
+        private static int SortByMaterialOrder((sbyte renderGroup, List<RenderEntity>) x, (sbyte renderGroup, List<RenderEntity>) y)
         {
-            return x.material.order.CompareTo(y.material.order);
+            return x.renderGroup.CompareTo(y.renderGroup);
         }
     }
 }

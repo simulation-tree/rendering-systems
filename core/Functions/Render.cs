@@ -24,17 +24,16 @@ namespace Rendering.Functions
         }
 #endif
 
-        public readonly void Invoke(MemoryAddress backend, MemoryAddress machine, uint materialEntity, ushort materialVersion, ReadOnlySpan<RenderEntity> entities)
+        public readonly void Invoke(MemoryAddress backend, MemoryAddress machine, sbyte renderGroup, ReadOnlySpan<RenderEntity> entities)
         {
-            function(new(backend, machine, materialEntity, materialVersion, entities));
+            function(new(backend, machine, renderGroup, entities));
         }
 
         public readonly struct Input
         {
             public readonly MemoryAddress backend;
             public readonly MemoryAddress machine;
-            public readonly uint materialEntity;
-            public readonly ushort materialVersion;
+            public readonly sbyte renderGroup;
 
             private readonly RenderEntity* entities;
             private readonly int count;
@@ -44,12 +43,11 @@ namespace Rendering.Functions
             /// </summary>
             public readonly ReadOnlySpan<RenderEntity> Entities => new(entities, count);
 
-            public Input(MemoryAddress backend, MemoryAddress machine, uint materialEntity, ushort materialVersion, ReadOnlySpan<RenderEntity> entities)
+            public Input(MemoryAddress backend, MemoryAddress machine, sbyte renderGroup, ReadOnlySpan<RenderEntity> entities)
             {
                 this.backend = backend;
                 this.machine = machine;
-                this.materialEntity = materialEntity;
-                this.materialVersion = materialVersion;
+                this.renderGroup = renderGroup;
                 this.entities = entities.GetPointer();
                 count = entities.Length;
             }

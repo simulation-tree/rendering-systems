@@ -57,9 +57,9 @@ namespace Rendering.Systems
             return backend.beginRender.Invoke(backend.allocation, machine, clearColor);
         }
 
-        public readonly void Render(uint materialEntity, ushort materialVersion, ReadOnlySpan<RenderEntity> renderers)
+        public readonly void Render(sbyte renderGroup, ReadOnlySpan<RenderEntity> renderers)
         {
-            backend.render.Invoke(backend.allocation, machine, materialEntity, materialVersion, renderers);
+            backend.render.Invoke(backend.allocation, machine, renderGroup, renderers);
         }
 
         public readonly void EndRender()

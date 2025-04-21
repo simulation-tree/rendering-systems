@@ -55,16 +55,14 @@ namespace Rendering.Systems.Tests
             ref TestRenderer testRenderer = ref renderer.Read<TestRenderer>();
             testRenderer.clearColor = clearColor;
             testRenderer.entities.Clear();
-            testRenderer.materialEntity = default;
-            testRenderer.materialVersion = default;
+            testRenderer.renderGroup = default;
             return StatusCode.Continue;
         }
 
-        void IRenderingBackend.Render(in MemoryAddress renderer, in uint materialEntity, in ushort materialVersion, in ReadOnlySpan<RenderEntity> entities)
+        void IRenderingBackend.Render(in MemoryAddress renderer, in sbyte renderGroup, in ReadOnlySpan<RenderEntity> entities)
         {
             ref TestRenderer testRenderer = ref renderer.Read<TestRenderer>();
-            testRenderer.materialEntity = materialEntity;
-            testRenderer.materialVersion = materialVersion;
+            testRenderer.renderGroup = renderGroup;
             testRenderer.entities.AddRange(entities);
         }
 
@@ -81,8 +79,7 @@ namespace Rendering.Systems.Tests
         public readonly Array<DestinationExtension> extensionNames;
         public readonly List<RenderEntity> entities;
         public readonly MemoryAddress instance;
-        public uint materialEntity;
-        public ushort materialVersion;
+        public sbyte renderGroup;
         public Vector4 clearColor;
         public MemoryAddress surface;
         public bool finishedRendering;

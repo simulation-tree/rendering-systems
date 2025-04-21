@@ -89,7 +89,7 @@ namespace Rendering.Systems.Tests
             Assert.That(testRenderer.destination, Is.EqualTo(destination));
             Assert.That(testRenderer.entities.Count, Is.EqualTo(1));
 
-            RenderEntity firstEntity = new(meshRenderer.value, mesh.value, vertexShader.value, fragmentShader.value, mesh.Version, vertexShader.Version, fragmentShader.Version);
+            RenderEntity firstEntity = new(meshRenderer.value, mesh.value, material.value, vertexShader.value, fragmentShader.value, mesh.Version, vertexShader.Version, fragmentShader.Version);
             Assert.That(testRenderer.entities[0], Is.EqualTo(firstEntity));
 
             meshRenderer.Dispose();

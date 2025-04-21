@@ -64,7 +64,7 @@ namespace Rendering
         /// Performs rendering of a single frame with the <see cref="Destination"/>
         /// the renderer was created with.
         /// </summary>
-        void Render(in MemoryAddress machine, in uint materialEntity, in ushort materialVersion, in ReadOnlySpan<RenderEntity> entities);
+        void Render(in MemoryAddress machine, in sbyte renderGroup, in ReadOnlySpan<RenderEntity> entities);
 
         /// <summary>
         /// Finishes rendering a frame.
