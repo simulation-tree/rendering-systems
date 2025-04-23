@@ -88,7 +88,9 @@ namespace Rendering.Systems.Tests
             TestRenderer testRenderer = TestRendererBackend.renderingMachines[0].Read<TestRenderer>();
             Assert.That(testRenderer.destination, Is.EqualTo(destination));
             Assert.That(testRenderer.entities.Count, Is.EqualTo(1));
-            Assert.That(testRenderer.entities[0], Is.EqualTo(meshRenderer.value));
+
+            RenderEntity firstEntity = new(meshRenderer.value, mesh.value, material.value, vertexShader.value, fragmentShader.value, mesh.Version, vertexShader.Version, fragmentShader.Version);
+            Assert.That(testRenderer.entities[0], Is.EqualTo(firstEntity));
 
             meshRenderer.Dispose();
 
@@ -101,7 +103,7 @@ namespace Rendering.Systems.Tests
             simulator.Update();
 
             Assert.That(testRenderer.entities.Count, Is.EqualTo(1));
-            Assert.That(testRenderer.entities[0], Is.EqualTo(meshRenderer.value));
+            Assert.That(testRenderer.entities[0], Is.EqualTo(firstEntity));
         }
     }
 }

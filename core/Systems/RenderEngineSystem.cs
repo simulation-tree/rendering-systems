@@ -2,6 +2,7 @@
 using Materials.Components;
 using Meshes.Components;
 using Rendering.Components;
+using Rendering.Functions;
 using Shaders.Components;
 using Simulation;
 using System;
@@ -19,7 +20,7 @@ namespace Rendering.Systems
         private readonly Dictionary<long, RenderingBackend> availableBackends;
         private readonly Dictionary<Destination, RenderingMachine> renderingMachines;
         private readonly Array<EntityComponents> entityComponents;
-        private readonly ViewportGroups viewportGroups;
+        private readonly List<RenderEnginePluginFunction> pluginFunctions;
 
         public RenderEngineSystem()
         {
@@ -27,12 +28,12 @@ namespace Rendering.Systems
             availableBackends = new();
             renderingMachines = new();
             entityComponents = new();
-            viewportGroups = new();
+            pluginFunctions = new();
         }
 
         public readonly void Dispose()
         {
-            viewportGroups.Dispose();
+            pluginFunctions.Dispose();
             entityComponents.Dispose();
 
             foreach (RenderingMachine renderSystem in renderingMachines.Values)
@@ -64,13 +65,21 @@ namespace Rendering.Systems
             int materialType = schema.GetComponentType<IsMaterial>();
             int shaderType = schema.GetComponentType<IsShader>();
             int meshType = schema.GetComponentType<IsMesh>();
-            int rendererInstanceType = schema.GetComponentType<RendererInstanceInUse>();
+            int surfaceInUseType = schema.GetComponentType<SurfaceInUse>();
+            int rendererInstanceInUseType = schema.GetComponentType<RendererInstanceInUse>();
             int destinationExtensionType = schema.GetArrayType<DestinationExtension>();
+            int pluginType = schema.GetComponentType<RenderEnginePluginFunction>();
+            if (context.IsSimulatorWorld(world))
+            {
+                CollectPlugins(world, pluginType);
+            }
+
             DestroyOldSystems(world);
-            CreateNewSystems(world, destinationType, rendererInstanceType, destinationExtensionType);
+            CreateRenderMachines(world, destinationType, rendererInstanceInUseType, destinationExtensionType);
+            CreateSurfaces(world, surfaceInUseType);
             CollectComponents(world, rendererType, materialType, shaderType, meshType);
             CollectRenderers(world, viewportType);
-            Render(world, destinationType);
+            Render(world, destinationType, surfaceInUseType);
         }
 
         readonly void ISystem.Finish(in SystemContext context, in World world)
@@ -94,9 +103,8 @@ namespace Rendering.Systems
             availableBackends.Add(hash, systemCreator);
         }
 
-        private readonly void CreateNewRenderers(World world, int destinationType, int rendererInstanceType, int destinationExtensionType)
+        private readonly void CreateRenderMachines(World world, int destinationType, int rendererInstanceType, int destinationExtensionType)
         {
-            Span<ASCIIText256> extensionNames = stackalloc ASCIIText256[32];
             foreach (Chunk chunk in world.Chunks)
             {
                 Definition definition = chunk.Definition;
@@ -107,7 +115,7 @@ namespace Rendering.Systems
                     for (int i = 0; i < entities.Length; i++)
                     {
                         ref IsDestination component = ref components[i];
-                        Destination entity = new Entity(world, entities[i]).As<Destination>();
+                        Destination entity = Entity.Get<Destination>(world, entities[i]);
                         if (knownDestinations.Contains(entity))
                         {
                             return;
@@ -123,11 +131,11 @@ namespace Rendering.Systems
         {
             ASCIIText256 label = destination.rendererLabel;
             long hash = label.GetLongHashCode();
-            if (availableBackends.TryGetValue(hash, out RenderingBackend renderingBackend))
+            if (availableBackends.TryGetValue(hash, out RenderingBackend backend))
             {
                 ReadOnlySpan<DestinationExtension> extensions = entity.GetArray<DestinationExtension>(destinationExtensionType);
-                (MemoryAddress renderer, MemoryAddress instance) = renderingBackend.create.Invoke(renderingBackend.allocation, entity, extensions);
-                RenderingMachine newRenderingMachine = new(renderer, renderingBackend);
+                (MemoryAddress machine, MemoryAddress instance) = backend.create.Invoke(backend.allocation, entity, extensions);
+                RenderingMachine newRenderingMachine = new(backend, machine, instance);
                 renderingMachines.Add(entity, newRenderingMachine);
                 knownDestinations.Add(entity);
                 entity.AddComponent(rendererInstanceType, new RendererInstanceInUse(instance));
@@ -135,7 +143,7 @@ namespace Rendering.Systems
             }
             else
             {
-                throw new InvalidOperationException($"Unknown renderer label `{label}`");
+                throw new InvalidOperationException($"Unknown renderer label `{label}`, no rendering backends available to handle it");
             }
         }
 
@@ -196,43 +204,105 @@ namespace Rendering.Systems
 
         private readonly void CollectRenderers(World world, int viewportType)
         {
-            int viewportCount = 0;
+            //collect renderers and store them with the viewports that they render to
             foreach (Chunk chunk in world.Chunks)
             {
                 Definition definition = chunk.Definition;
                 if (definition.ContainsComponent(viewportType) && !definition.ContainsTag(Schema.DisabledTagType))
                 {
-                    viewportCount += chunk.Count;
-                }
-            }
-
-            //find all viewports
-            Span<(uint viewportEntity, IsViewport component, RenderingMachine renderingMachine)> viewports = stackalloc (uint, IsViewport, RenderingMachine)[viewportCount];
-            viewportCount = 0;
-            foreach (Chunk chunk in world.Chunks)
-            {
-                Definition definition = chunk.Definition;
-                if (definition.ContainsComponent(viewportType) && !definition.ContainsTag(Schema.DisabledTagType))
-                {
-                    ReadOnlySpan<uint> entities = chunk.Entities;
-                    ComponentEnumerator<IsViewport> components = chunk.GetComponents<IsViewport>(viewportType);
-                    for (int i = 0; i < entities.Length; i++)
+                    ReadOnlySpan<uint> viewportEntities = chunk.Entities;
+                    ComponentEnumerator<IsViewport> viewportComponents = chunk.GetComponents<IsViewport>(viewportType);
+                    for (int i = 0; i < viewportEntities.Length; i++)
                     {
-                        uint viewportEntity = entities[i];
-                        IsViewport component = components[i];
-                        Viewport entity = new Entity(world, viewportEntity).As<Viewport>();
-                        uint destinationEntity = entity.GetReference(component.destinationReference);
+                        uint viewportEntity = viewportEntities[i];
+                        IsViewport viewport = viewportComponents[i];
+                        uint destinationEntity = world.GetReference(viewportEntity, viewport.destinationReference);
                         if (!world.ContainsEntity(destinationEntity))
                         {
                             continue;
                         }
 
-                        Destination destination = new Entity(world, destinationEntity).As<Destination>();
-                        ref RenderingMachine renderingMachine = ref renderingMachines.TryGetValue(destination, out bool contains);
-                        if (contains)
+                        Destination destination = Entity.Get<Destination>(world, destinationEntity);
+                        ref RenderingMachine renderingMachine = ref renderingMachines.TryGetValue(destination, out bool containsRenderingMachine);
+                        if (containsRenderingMachine)
                         {
-                            viewports[viewportCount++] = (viewportEntity, component, renderingMachine);
-                            renderingMachine.rendererGroups.Clear();
+                            ref ViewportGroup viewportGroup = ref renderingMachine.viewportGroups.TryGetValue(viewportEntity, out bool containsViewportGroup);
+                            if (!containsViewportGroup)
+                            {
+                                viewportGroup = ref renderingMachine.viewportGroups.Add(viewportEntity);
+                                viewportGroup = new();
+                            }
+                            else
+                            {
+                                viewportGroup.Reset();
+                            }
+
+                            viewportGroup.order = viewport.order;
+                            LayerMask viewportMask = viewport.renderMask;
+                            for (uint entity = 1; entity < entityComponents.Length; entity++)
+                            {
+                                EntityComponents rendererComponents = entityComponents[(int)entity];
+                                if (rendererComponents.ContainsRenderer)
+                                {
+                                    IsRenderer renderer = rendererComponents.renderer;
+                                    if (renderer.renderMask.ContainsAny(viewportMask))
+                                    {
+                                        if (renderer.materialReference != default && renderer.meshReference != default)
+                                        {
+                                            uint materialEntity = world.GetReference(entity, renderer.materialReference);
+                                            EntityComponents materialComponents = entityComponents[(int)materialEntity];
+                                            if (!materialComponents.ContainsMaterial)
+                                            {
+                                                //material entity is missing the component
+                                                continue;
+                                            }
+
+                                            uint meshEntity = world.GetReference(entity, renderer.meshReference);
+                                            EntityComponents meshComponents = entityComponents[(int)meshEntity];
+                                            if (!meshComponents.ContainsMesh)
+                                            {
+                                                //mesh entity is missing the component
+                                                continue;
+                                            }
+
+                                            IsMesh mesh = meshComponents.mesh;
+                                            IsMaterial material = materialComponents.material;
+                                            if (material.vertexShaderReference != default && material.fragmentShaderReference != default)
+                                            {
+                                                uint vertexShaderEntity = world.GetReference(materialEntity, material.vertexShaderReference);
+                                                EntityComponents vertexShaderComponents = entityComponents[(int)vertexShaderEntity];
+                                                if (!vertexShaderComponents.ContainsShader)
+                                                {
+                                                    //vertex shader entity is missing the component
+                                                    continue;
+                                                }
+
+                                                uint fragmentShaderEntity = world.GetReference(materialEntity, material.fragmentShaderReference);
+                                                EntityComponents fragmentShaderComponents = entityComponents[(int)fragmentShaderEntity];
+                                                if (!fragmentShaderComponents.ContainsShader)
+                                                {
+                                                    //fragment shader entity is missing the component
+                                                    continue;
+                                                }
+
+                                                //todo: for efficiency, the work of filtering out valid renderer entities could be done once
+                                                //instead of per viewport
+                                                IsShader vertexShader = entityComponents[(int)vertexShaderEntity].shader;
+                                                IsShader fragmentShader = entityComponents[(int)fragmentShaderEntity].shader;
+                                                RenderEntity renderEntity = new(entity, meshEntity, materialEntity, vertexShaderEntity, fragmentShaderEntity, mesh.version, vertexShader.version, fragmentShader.version);
+                                                ref List<RenderEntity> renderEntities = ref viewportGroup.map.TryGetValue(material.renderGroup, out bool containsMaterialGroup);
+                                                if (!containsMaterialGroup)
+                                                {
+                                                    renderEntities = ref viewportGroup.map.Add(material.renderGroup);
+                                                    renderEntities = new(256);
+                                                }
+
+                                                renderEntities.Add(renderEntity);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                         }
                         else
                         {
@@ -241,65 +311,28 @@ namespace Rendering.Systems
                     }
                 }
             }
+        }
 
-            viewports = viewports.Slice(0, viewportCount);
-            viewports.Sort(SortViewportsByViewportOrder);
-
-            this.viewportGroups.EnsureCapacity(viewportCount);
-
-            //collect renderers for each viewport
-            Span<EntityComponents> entityComponents = this.entityComponents.AsSpan();
-            Span<ViewportGroup> viewportGroups = this.viewportGroups.AsSpan();
-            for (int v = 0; v < viewportCount; v++)
+        private readonly void CollectPlugins(World world, int pluginType)
+        {
+            pluginFunctions.Clear();
+            foreach (Chunk chunk in world.Chunks)
             {
-                ref ViewportGroup viewportGroup = ref viewportGroups[v];
-                (uint viewportEntity, IsViewport component, RenderingMachine renderingMachine) = viewports[v];
-                viewportGroup.Initialize(viewportEntity);
-                LayerMask viewportMask = component.renderMask;
-                for (uint e = 0; e < entityComponents.Length; e++)
+                Definition definition = chunk.Definition;
+                if (definition.ContainsComponent(pluginType))
                 {
-                    EntityComponents components = entityComponents[(int)e];
-                    if (components.ContainsRenderer)
+                    int count = chunk.Count;
+                    ComponentEnumerator<RenderEnginePluginFunction> components = chunk.GetComponents<RenderEnginePluginFunction>(pluginType);
+                    for (int i = 0; i < count; i++)
                     {
-                        IsRenderer renderer = components.renderer;
-                        if (renderer.renderMask.ContainsAny(viewportMask))
-                        {
-                            if (renderer.materialReference != default && renderer.meshReference != default)
-                            {
-                                uint materialEntity = world.GetReference(e, renderer.materialReference);
-                                IsMaterial material = entityComponents[(int)materialEntity].material;
-                                viewportGroup.Add(e, materialEntity, material);
-                            }
-                        }
-                    }
-                }
-
-                Span<(uint rendererEntity, uint materialEntity, IsMaterial material)> rendererEntities = viewportGroup.Renderers;
-                rendererEntities.Sort(SortRenderersByMaterialOrder);
-
-                for (int i = 0; i < rendererEntities.Length; i++)
-                {
-                    (uint rendererEntity, uint materialEntity, IsMaterial material) = rendererEntities[i];
-                    IsRenderer renderer = entityComponents[(int)rendererEntity].renderer;
-                    uint meshEntity = world.GetReference(rendererEntity, renderer.meshReference);
-                    IsMesh mesh = entityComponents[(int)meshEntity].mesh;
-                    if (material.vertexShaderReference != default && material.fragmentShaderReference != default)
-                    {
-                        uint vertexShaderEntity = world.GetReference(materialEntity, material.vertexShaderReference);
-                        IsShader vertexShader = entityComponents[(int)vertexShaderEntity].shader;
-                        uint fragmentShaderEntity = world.GetReference(materialEntity, material.fragmentShaderReference);
-                        IsShader fragmentShader = entityComponents[(int)fragmentShaderEntity].shader;
-                        RendererCombination combination = new(materialEntity, meshEntity, vertexShaderEntity, fragmentShaderEntity);
-                        renderingMachine.rendererGroups.Add(combination, rendererEntity);
+                        pluginFunctions.Add(components[i]);
                     }
                 }
             }
         }
 
-        private readonly void CreateNewSystems(World world, int destinationType, int rendererInstanceType, int destinationExtensionType)
+        private readonly void CreateSurfaces(World world, int surfaceInUseType)
         {
-            CreateNewRenderers(world, destinationType, rendererInstanceType, destinationExtensionType);
-
             foreach (Destination destination in knownDestinations)
             {
                 if (destination.world != world)
@@ -307,22 +340,27 @@ namespace Rendering.Systems
                     continue;
                 }
 
-                //notify that surface has been created
+                //notify the entity that surface has been created
                 ref RenderingMachine renderingMachine = ref renderingMachines[destination];
-                if (!renderingMachine.IsSurfaceAvailable && destination.TryGetSurfaceInUse(out MemoryAddress surface))
+                if (!renderingMachine.hasSurface)
                 {
-                    renderingMachine.SurfaceCreated(surface);
+                    if (destination.TryGetComponent(surfaceInUseType, out SurfaceInUse surfaceInUse))
+                    {
+                        renderingMachine.hasSurface = true;
+                        renderingMachine.SurfaceCreated(surfaceInUse.value);
+                    }
                 }
             }
         }
 
-        private readonly void Render(World world, int destinationType)
+        private readonly void Render(World world, int destinationType, int surfaceInUseType)
         {
+            ReadOnlySpan<Destination> knownDestinations = this.knownDestinations.AsSpan();
             foreach (Destination destination in knownDestinations)
             {
                 if (destination.world == world)
                 {
-                    if (!destination.ContainsComponent<SurfaceInUse>())
+                    if (!destination.ContainsComponent(surfaceInUseType))
                     {
                         continue; //no surface to render to yet
                     }
@@ -333,44 +371,67 @@ namespace Rendering.Systems
                         continue; //no area to render to
                     }
 
-                    ref RenderingMachine renderingMachine = ref renderingMachines[destination];
+                    RenderingMachine renderingMachine = renderingMachines[destination];
                     StatusCode statusCode = renderingMachine.BeginRender(component.clearColor);
                     if (statusCode != StatusCode.Continue)
                     {
                         Trace.WriteLine($"Failed to begin rendering for destination `{destination}` because of status code `{statusCode}`");
-                        continue;
+                        return;
                     }
 
-                    ReadOnlySpan<RendererCombination> combinations = renderingMachine.rendererGroups.Combinations;
-                    for (int c = 0; c < combinations.Length; c++)
-                    {
-                        RendererCombination combination = combinations[c];
-                        ReadOnlySpan<uint> entities = renderingMachine.rendererGroups.GetEntities(combination);
-                        MaterialData material = new(combination.materialEntity, GetMaterialVersion(combination.materialEntity));
-                        MeshData mesh = new(combination.meshEntity, GetMeshVersion(combination.meshEntity));
-                        VertexShaderData vertexShader = new(combination.vertexShaderEntity, GetShaderVersion(combination.vertexShaderEntity));
-                        FragmentShaderData fragmentShader = new(combination.fragmentShaderEntity, GetShaderVersion(combination.fragmentShaderEntity));
-                        renderingMachine.Render(entities, material, mesh, vertexShader, fragmentShader);
-                    }
-
-                    renderingMachine.EndRender();
+                    RenderDestination(world, renderingMachine);
                 }
             }
         }
 
-        private readonly uint GetMaterialVersion(uint entity)
+        private readonly void RenderDestination(World world, RenderingMachine renderingMachine)
         {
-            return entityComponents[(int)entity].material.version;
+            //sort viewports by their declared order
+            Span<(uint viewportEntity, ViewportGroup viewportGroup)> viewportGroups = stackalloc (uint, ViewportGroup)[renderingMachine.viewportGroups.Count];
+            int viewportCount = 0;
+            foreach ((uint viewportEntity, ViewportGroup viewportGroup) in renderingMachine.viewportGroups)
+            {
+                viewportGroups[viewportCount++] = (viewportEntity, viewportGroup);
+            }
+
+            viewportGroups.Sort(SortByViewportOrder);
+
+            //render all viewports
+            for (int v = 0; v < viewportCount; v++)
+            {
+                (uint viewportEntity, ViewportGroup viewportGroup) = viewportGroups[v];
+                RenderViewport(world, renderingMachine, viewportEntity, viewportGroup);
+            }
+
+            renderingMachine.EndRender();
         }
 
-        private readonly uint GetMeshVersion(uint entity)
+        private readonly void RenderViewport(World world, RenderingMachine renderingMachine, uint viewportEntity, ViewportGroup viewportGroup)
         {
-            return entityComponents[(int)entity].mesh.version;
-        }
+            //sort material groups by their declared order
+            Span<(sbyte renderGroup, List<RenderEntity> renderEntities)> materialGroups = stackalloc (sbyte, List<RenderEntity>)[viewportGroup.map.Count];
+            int materialCount = 0;
+            foreach ((sbyte renderGroup, List<RenderEntity> renderEntities) in viewportGroup.map)
+            {
+                materialGroups[materialCount++] = (renderGroup, renderEntities);
+            }
 
-        private readonly uint GetShaderVersion(uint entity)
-        {
-            return entityComponents[(int)entity].shader.version;
+            materialGroups.Sort(SortByMaterialOrder);
+
+            //render all materials
+            ReadOnlySpan<RenderEnginePluginFunction> pluginFunctions = this.pluginFunctions.AsSpan();
+            for (int m = 0; m < materialCount; m++)
+            {
+                //preprocess
+                (sbyte renderGroup, List<RenderEntity> renderEntities) = materialGroups[m];
+                Span<RenderEntity> entities = renderEntities.AsSpan();
+                for (int p = 0; p < pluginFunctions.Length; p++)
+                {
+                    pluginFunctions[p].Invoke(world, renderGroup, entities);
+                }
+
+                renderingMachine.Render(renderGroup, entities);
+            }
         }
 
         private readonly void DestroyOldSystems(World world)
@@ -385,22 +446,22 @@ namespace Rendering.Systems
 
                 if (destination.IsDestroyed)
                 {
-                    renderingMachines.Remove(destination, out RenderingMachine destinationRenderer);
-                    destinationRenderer.Dispose();
+                    renderingMachines.Remove(destination, out RenderingMachine machine);
+                    machine.Dispose();
                     knownDestinations.RemoveAt(i);
                     Trace.WriteLine($"Removed render system for destination `{destination}`");
                 }
             }
         }
 
-        private static int SortViewportsByViewportOrder((uint, IsViewport viewport, RenderingMachine) x, (uint, IsViewport viewport, RenderingMachine) y)
+        private static int SortByViewportOrder((uint, ViewportGroup group) x, (uint, ViewportGroup group) y)
         {
-            return x.viewport.order.CompareTo(y.viewport.order);
+            return x.group.order.CompareTo(y.group.order);
         }
 
-        private static int SortRenderersByMaterialOrder((uint, uint, IsMaterial material) x, (uint, uint, IsMaterial material) y)
+        private static int SortByMaterialOrder((sbyte renderGroup, List<RenderEntity>) x, (sbyte renderGroup, List<RenderEntity>) y)
         {
-            return x.material.order.CompareTo(y.material.order);
+            return x.renderGroup.CompareTo(y.renderGroup);
         }
     }
 }

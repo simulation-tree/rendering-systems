@@ -13,10 +13,10 @@ namespace Rendering.Systems.Tests
         //todo: test for customizing renderer entities sorted by their material
         static RenderingSystemTests()
         {
-            MetadataRegistry.Load<MeshesTypeBank>();
-            MetadataRegistry.Load<MaterialsTypeBank>();
-            MetadataRegistry.Load<RenderingTypeBank>();
-            MetadataRegistry.Load<ShadersTypeBank>();
+            MetadataRegistry.Load<MeshesMetadataBank>();
+            MetadataRegistry.Load<MaterialsMetadataBank>();
+            MetadataRegistry.Load<RenderingMetadataBank>();
+            MetadataRegistry.Load<ShadersMetadataBank>();
         }
 
         protected override Schema CreateSchema()

@@ -1,5 +1,5 @@
-﻿using Simulation;
-using System;
+﻿using Rendering.Functions;
+using Simulation;
 using System.Numerics;
 using Unmanaged;
 
@@ -17,34 +17,35 @@ namespace Rendering
             backend.Finish();
         }
 
-        public static (MemoryAddress renderer, MemoryAddress instance) Create<T>(ref T backend, in Destination destination, in ReadOnlySpan<DestinationExtension> extensionNames) where T : unmanaged, IRenderingBackend
+        public static Create.Output Create<T>(ref T backend, in Create.Input input) where T : unmanaged, IRenderingBackend
         {
-            return backend.Create(destination, extensionNames);
+            (MemoryAddress machine, MemoryAddress instance) = backend.Create(input.destination, input.ExtensionNames);
+            return new(machine, instance);
         }
 
-        public static void Dispose<T>(ref T backend, in MemoryAddress renderer) where T : unmanaged, IRenderingBackend
+        public static void Dispose<T>(ref T backend, in Dispose.Input input) where T : unmanaged, IRenderingBackend
         {
-            backend.Dispose(renderer);
+            backend.Dispose(input.machine, input.instance);
         }
 
-        public static void SurfaceCreated<T>(ref T backend, in MemoryAddress renderer, MemoryAddress surface) where T : unmanaged, IRenderingBackend
+        public static void SurfaceCreated<T>(ref T backend, in MemoryAddress machine, MemoryAddress surface) where T : unmanaged, IRenderingBackend
         {
-            backend.SurfaceCreated(renderer, surface);
+            backend.SurfaceCreated(machine, surface);
         }
 
-        public static StatusCode BeginRender<T>(ref T backend, in MemoryAddress renderer, in Vector4 clearColor) where T : unmanaged, IRenderingBackend
+        public static StatusCode BeginRender<T>(ref T backend, in MemoryAddress machine, in Vector4 clearColor) where T : unmanaged, IRenderingBackend
         {
-            return backend.BeginRender(renderer, clearColor);
+            return backend.BeginRender(machine, clearColor);
         }
 
-        public static void Render<T>(ref T backend, in MemoryAddress renderer, in ReadOnlySpan<uint> entities, in MaterialData material, in MeshData mesh, in VertexShaderData vertexShader, in FragmentShaderData fragmentShader) where T : unmanaged, IRenderingBackend
+        public static void Render<T>(ref T backend, in Render.Input input) where T : unmanaged, IRenderingBackend
         {
-            backend.Render(renderer, entities, material, mesh, vertexShader, fragmentShader);
+            backend.Render(input.machine, input.renderGroup, input.Entities);
         }
 
-        public static void EndRender<T>(ref T backend, in MemoryAddress renderer) where T : unmanaged, IRenderingBackend
+        public static void EndRender<T>(ref T backend, in MemoryAddress machine) where T : unmanaged, IRenderingBackend
         {
-            backend.EndRender(renderer);
+            backend.EndRender(machine);
         }
     }
 }

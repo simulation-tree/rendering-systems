@@ -24,36 +24,30 @@ namespace Rendering.Functions
         }
 #endif
 
-        public readonly void Invoke(MemoryAddress backend, MemoryAddress renderer, ReadOnlySpan<uint> entities, MaterialData material, MeshData mesh, VertexShaderData vertexShader, FragmentShaderData fragmentShader)
+        public readonly void Invoke(MemoryAddress backend, MemoryAddress machine, sbyte renderGroup, ReadOnlySpan<RenderEntity> entities)
         {
-            function(new(backend, renderer, entities, material, mesh, vertexShader, fragmentShader));
+            function(new(backend, machine, renderGroup, entities));
         }
 
         public readonly struct Input
         {
             public readonly MemoryAddress backend;
-            public readonly MemoryAddress renderer;
-            public readonly MaterialData material;
-            public readonly MeshData mesh;
-            public readonly VertexShaderData vertexShader;
-            public readonly FragmentShaderData fragmentShader;
+            public readonly MemoryAddress machine;
+            public readonly sbyte renderGroup;
 
-            private readonly uint* entities;
+            private readonly RenderEntity* entities;
             private readonly int count;
 
             /// <summary>
             /// All entities containing the same filter, callback and identifier combinations.
             /// </summary>
-            public readonly ReadOnlySpan<uint> Entities => new(entities, count);
+            public readonly ReadOnlySpan<RenderEntity> Entities => new(entities, count);
 
-            public Input(MemoryAddress backend, MemoryAddress renderer, ReadOnlySpan<uint> entities, MaterialData material, MeshData mesh, VertexShaderData vertexShader, FragmentShaderData fragmentShader)
+            public Input(MemoryAddress backend, MemoryAddress machine, sbyte renderGroup, ReadOnlySpan<RenderEntity> entities)
             {
                 this.backend = backend;
-                this.renderer = renderer;
-                this.material = material;
-                this.mesh = mesh;
-                this.vertexShader = vertexShader;
-                this.fragmentShader = fragmentShader;
+                this.machine = machine;
+                this.renderGroup = renderGroup;
                 this.entities = entities.GetPointer();
                 count = entities.Length;
             }
