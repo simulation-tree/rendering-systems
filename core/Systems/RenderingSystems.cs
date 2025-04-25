@@ -19,7 +19,7 @@ namespace Rendering.Systems
 
         void ISystem.Start(in SystemContext context, in World world)
         {
-            if (context.World == world)
+            if (context.IsSimulatorWorld(world))
             {
                 context.AddSystem(new ClampNestedScissorViews());
                 SystemContainer<RenderEngineSystem> renderEngine = context.AddSystem(new RenderEngineSystem());
@@ -33,7 +33,7 @@ namespace Rendering.Systems
 
         readonly void ISystem.Finish(in SystemContext context, in World world)
         {
-            if (context.World == world)
+            if (context.IsSimulatorWorld(world))
             {
                 context.RemoveSystem<RenderEngineSystem>();
                 context.RemoveSystem<ClampNestedScissorViews>();
