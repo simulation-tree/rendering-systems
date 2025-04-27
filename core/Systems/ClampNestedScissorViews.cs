@@ -84,7 +84,7 @@ namespace Rendering.Systems
             {
                 operation.AddComponent<WorldRendererScissor>();
                 operation.Perform(world);
-                operation.Clear();
+                operation.Reset();
             }
 
             //gather values for later
