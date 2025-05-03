@@ -82,7 +82,7 @@ namespace Rendering.Systems
 
             if (operation.Count > 0)
             {
-                operation.AddComponent<WorldRendererScissor>();
+                operation.AddComponentType<WorldRendererScissor>();
                 operation.Perform(world);
                 operation.Reset();
             }
