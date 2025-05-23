@@ -10,14 +10,15 @@ namespace Rendering.Systems.Tests
         [Test]
         public void CheckInitialization()
         {
+            simulator.Add(new RenderingSystems(simulator));
+
             Assert.That(TestRendererBackend.initialized, Is.False);
 
-            RenderingSystems renderingSystems = simulator.AddSystem(new RenderingSystems());
-            renderingSystems.RegisterRenderingBackend<TestRendererBackend>();
+            RegisterRenderingBackend(new TestRendererBackend());
 
             Assert.That(TestRendererBackend.initialized, Is.True);
 
-            simulator.RemoveSystem<RenderingSystems>();
+            simulator.Remove<RenderingSystems>();
 
             Assert.That(TestRendererBackend.initialized, Is.False);
         }
@@ -25,25 +26,30 @@ namespace Rendering.Systems.Tests
         [Test]
         public void CreatesRendererForDestination()
         {
-            Destination testDestination = new(world, new(200, 200), RenderingBackend.GetLabel<TestRendererBackend>());
-            RenderingSystems renderingSystems = simulator.AddSystem(new RenderingSystems());
-            renderingSystems.RegisterRenderingBackend<TestRendererBackend>();
+            Destination testDestination = new(world, new(200, 200), "test");
 
-            simulator.Update();
+            simulator.Add(new RenderingSystems(simulator));
+            TestRendererBackend testRendererBackend = new();
+            RegisterRenderingBackend(testRendererBackend);
 
-            Assert.That(TestRendererBackend.renderingMachines.Count, Is.EqualTo(1));
-            TestRenderer testRenderer = TestRendererBackend.renderingMachines[0].Read<TestRenderer>();
+            Update();
+
+            Assert.That(testRendererBackend.renderingMachines.Count, Is.EqualTo(1));
+            TestRenderer testRenderer = testRendererBackend.renderingMachines[0];
             Assert.That(testRenderer.destination, Is.EqualTo(testDestination));
+
+            simulator.Remove<RenderingSystems>();
         }
 
         [Test]
         public void IterateThroughRendererObjects()
         {
-            Destination destination = new(world, new(200, 200), RenderingBackend.GetLabel<TestRendererBackend>());
+            Destination destination = new(world, new(200, 200), "test");
             destination.AddComponent(new SurfaceInUse());
 
-            RenderingSystems renderingSystems = simulator.AddSystem(new RenderingSystems());
-            renderingSystems.RegisterRenderingBackend<TestRendererBackend>();
+            simulator.Add(new RenderingSystems(simulator));
+            TestRendererBackend testRendererBackend = new();
+            RegisterRenderingBackend(testRendererBackend);
 
             Mesh mesh = new(world);
             Shader vertexShader = new(world, ShaderType.Vertex);
@@ -52,27 +58,30 @@ namespace Rendering.Systems.Tests
             MeshRenderer meshRenderer = new(world, mesh, material);
             Viewport viewport = new(world, destination);
 
-            simulator.Update();
+            Update();
 
-            Assert.That(TestRendererBackend.renderingMachines.Count, Is.EqualTo(1));
-            TestRenderer testRenderer = TestRendererBackend.renderingMachines[0].Read<TestRenderer>();
+            Assert.That(testRendererBackend.renderingMachines.Count, Is.EqualTo(1));
+            TestRenderer testRenderer = testRendererBackend.renderingMachines[0];
             Assert.That(testRenderer.destination, Is.EqualTo(destination));
             Assert.That(testRenderer.entities.Count, Is.EqualTo(1));
 
             meshRenderer.IsEnabled = false;
-            simulator.Update();
+            Update();
 
             Assert.That(testRenderer.entities.Count, Is.EqualTo(0));
+
+            simulator.Remove<RenderingSystems>();
         }
 
         [Test]
         public void CreateAndDestroyRendererObjects()
         {
-            Destination destination = new(world, new(200, 200), RenderingBackend.GetLabel<TestRendererBackend>());
+            Destination destination = new(world, new(200, 200), "test");
             destination.AddComponent(new SurfaceInUse());
 
-            RenderingSystems renderingSystems = simulator.AddSystem(new RenderingSystems());
-            renderingSystems.RegisterRenderingBackend<TestRendererBackend>();
+            simulator.Add(new RenderingSystems(simulator));
+            TestRendererBackend testRendererBackend = new();
+            RegisterRenderingBackend(testRendererBackend);
 
             Mesh mesh = new(world);
             Shader vertexShader = new(world, ShaderType.Vertex);
@@ -81,11 +90,11 @@ namespace Rendering.Systems.Tests
             MeshRenderer meshRenderer = new(world, mesh, material);
             Viewport viewport = new(world, destination);
 
-            simulator.Update();
+            Update();
 
-            Assert.That(TestRendererBackend.renderingMachines.Count, Is.EqualTo(1));
+            Assert.That(testRendererBackend.renderingMachines.Count, Is.EqualTo(1));
 
-            TestRenderer testRenderer = TestRendererBackend.renderingMachines[0].Read<TestRenderer>();
+            TestRenderer testRenderer = testRendererBackend.renderingMachines[0];
             Assert.That(testRenderer.destination, Is.EqualTo(destination));
             Assert.That(testRenderer.entities.Count, Is.EqualTo(1));
 
@@ -94,16 +103,18 @@ namespace Rendering.Systems.Tests
 
             meshRenderer.Dispose();
 
-            simulator.Update();
+            Update();
 
             Assert.That(testRenderer.entities.Count, Is.EqualTo(0));
 
             meshRenderer = new(world, mesh, material);
 
-            simulator.Update();
+            Update();
 
             Assert.That(testRenderer.entities.Count, Is.EqualTo(1));
             Assert.That(testRenderer.entities[0], Is.EqualTo(firstEntity));
+
+            simulator.Remove<RenderingSystems>();
         }
     }
 }

@@ -19,6 +19,14 @@ namespace Rendering.Systems.Tests
             MetadataRegistry.Load<ShadersMetadataBank>();
         }
 
+        protected void RegisterRenderingBackend<T>(T renderingBackend) where T : RenderingBackend
+        {
+            if (simulator.TryGetFirst(out RenderingSystems? renderingSystems))
+            {
+                renderingSystems.RegisterRenderingBackend(renderingBackend);
+            }
+        }
+
         protected override Schema CreateSchema()
         {
             Schema schema = base.CreateSchema();

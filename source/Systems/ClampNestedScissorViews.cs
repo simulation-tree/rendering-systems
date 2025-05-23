@@ -9,7 +9,7 @@ using Worlds;
 
 namespace Rendering.Systems
 {
-    public readonly partial struct ClampNestedScissorViews : ISystem
+    public class ClampNestedScissorViews : ISystem, IDisposable
     {
         private readonly Array<Vector4> scissors;
         private readonly Array<bool> hasScissor;
@@ -19,14 +19,14 @@ namespace Rendering.Systems
 
         public ClampNestedScissorViews()
         {
-            this.scissors = new(4);
-            this.hasScissor = new(4);
-            this.sortedEntities = new(4);
-            this.parentEntities = new(4);
-            this.operation = new();
+            scissors = new(4);
+            hasScissor = new(4);
+            sortedEntities = new(4);
+            parentEntities = new(4);
+            operation = new();
         }
 
-        public readonly void Dispose()
+        public void Dispose()
         {
             foreach (List<uint> entities in sortedEntities)
             {
@@ -40,17 +40,10 @@ namespace Rendering.Systems
             scissors.Dispose();
         }
 
-        void ISystem.Start(in SystemContext context, in World world)
-        {
-        }
-
-        void ISystem.Finish(in SystemContext context, in World world)
-        {
-        }
-
-        void ISystem.Update(in SystemContext context, in World world, in TimeSpan delta)
+        void ISystem.Update(Simulator simulator, double deltaTime)
         {
             //prepare buffers
+            World world = simulator.world;
             int capacity = (world.MaxEntityValue + 1).GetNextPowerOf2();
             if (scissors.Length < capacity)
             {

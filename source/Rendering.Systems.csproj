@@ -1,33 +1,38 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-    <PropertyGroup>
-        <TargetFramework>net9.0</TargetFramework>
-        <ImplicitUsings>disable</ImplicitUsings>
-        <IncludeBuildOutput>false</IncludeBuildOutput>
-        <IncludeContentInPack>true</IncludeContentInPack>
-        <NoWarn>$(NoWarn);NU5128</NoWarn>
-        <Nullable>enable</Nullable>
-        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-        <GenerateDocumentationFile>True</GenerateDocumentationFile>
-        <Title>Rendering Systems</Title>
-        <Authors>popcron</Authors>
-        <Company>simulation-tree</Company>
-        <RepositoryUrl>https://github.com/simulation-tree/rendering-systems</RepositoryUrl>
-        <PackageReadmeFile>README.md</PackageReadmeFile>
-        <IsAotCompatible>True</IsAotCompatible>
-        <IsTrimmable>True</IsTrimmable>
-        <PackageId/>
-    </PropertyGroup>
+	<PropertyGroup>
+		<TargetFramework>net9.0</TargetFramework>
+		<ImplicitUsings>disable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+		<IsAotCompatible>True</IsAotCompatible>
+		<IsTrimmable>True</IsTrimmable>
+		<TreatWarningsAsErrors>True</TreatWarningsAsErrors>
+		<Title>Rendering Systems</Title>
+		<Authors>popcron</Authors>
+		<Company>simulation-tree</Company>
+		<RepositoryUrl>https://github.com/simulation-tree/rendering-systems</RepositoryUrl>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
+		<PackageId/>
+	</PropertyGroup>
 
-    <ItemGroup>
-        <None Include="..\README.md">
-            <Pack>True</Pack>
-            <PackagePath>\</PackagePath>
-        </None>
-    </ItemGroup>
-
-    <ItemGroup>
-        <ProjectReference Include="..\core\Rendering.Systems.Core.csproj"/>
-    </ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\..\collections\source\Collections.csproj"/>
+		<ProjectReference Include="..\..\materials\source\Materials.csproj"/>
+		<ProjectReference Include="..\..\meshes\source\Meshes.csproj"/>
+		<ProjectReference Include="..\..\rendering\source\Rendering.csproj"/>
+		<ProjectReference Include="..\..\shaders\source\Shaders.csproj"/>
+		<ProjectReference Include="..\..\simulation\core\Simulation.Core.csproj"/>
+		<ProjectReference Include="..\..\unmanaged\core\Unmanaged.Core.csproj"/>
+		<ProjectReference Include="..\..\worlds\core\Worlds.Core.csproj"/>
+		<ProjectReference Include="..\..\simulation\generator\Simulation.Generator.csproj">
+			<OutputItemType>Analyzer</OutputItemType>
+			<ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+		</ProjectReference>
+		<ProjectReference Include="..\..\worlds\generator\Worlds.Generator.csproj">
+			<OutputItemType>Analyzer</OutputItemType>
+			<ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+		</ProjectReference>
+	</ItemGroup>
 
 </Project>

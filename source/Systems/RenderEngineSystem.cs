@@ -14,50 +14,53 @@ using Worlds;
 namespace Rendering.Systems
 {
     [SkipLocalsInit]
-    public readonly partial struct RenderEngineSystem : ISystem
+    public class RenderEngineSystem : ISystem, IDisposable
     {
         private readonly List<Destination> knownDestinations;
-        private readonly Dictionary<long, RenderingBackend> availableBackends;
-        private readonly Dictionary<Destination, RenderingMachine> renderingMachines;
+        private readonly List<Destination> destinationsWithSurfaces;
+        private readonly System.Collections.Generic.Dictionary<RendererLabel, RenderingBackend> availableBackends;
+        private readonly System.Collections.Generic.Dictionary<Destination, RenderingMachine> renderingMachines;
         private readonly Array<EntityComponents> entityComponents;
         private readonly List<RenderEnginePluginFunction> pluginFunctions;
 
         public RenderEngineSystem()
         {
-            knownDestinations = new();
-            availableBackends = new();
-            renderingMachines = new();
-            entityComponents = new();
-            pluginFunctions = new();
+            knownDestinations = new(4);
+            destinationsWithSurfaces = new(4);
+            availableBackends = new(4);
+            renderingMachines = new(4);
+            entityComponents = new(4);
+            pluginFunctions = new(4);
         }
 
-        public readonly void Dispose()
+        public void Dispose()
         {
             pluginFunctions.Dispose();
             entityComponents.Dispose();
 
             foreach (RenderingMachine renderSystem in renderingMachines.Values)
             {
+                foreach (ViewportGroup group in renderSystem.viewportGroups.Values)
+                {
+                    group.Dispose();
+                }
+
+                renderSystem.viewportGroups.Dispose();
                 renderSystem.Dispose();
             }
-
-            renderingMachines.Dispose();
-            knownDestinations.Dispose();
 
             foreach (RenderingBackend rendererBackend in availableBackends.Values)
             {
                 rendererBackend.Dispose();
             }
 
-            availableBackends.Dispose();
+            knownDestinations.Dispose();
+            destinationsWithSurfaces.Dispose();
         }
 
-        readonly void ISystem.Start(in SystemContext context, in World world)
+        void ISystem.Update(Simulator simulator, double deltaTime)
         {
-        }
-
-        readonly void ISystem.Update(in SystemContext context, in World world, in TimeSpan delta)
-        {
+            World world = simulator.world;
             Schema schema = world.Schema;
             int destinationType = schema.GetComponentType<IsDestination>();
             int rendererType = schema.GetComponentType<IsRenderer>();
@@ -69,41 +72,57 @@ namespace Rendering.Systems
             int rendererInstanceInUseType = schema.GetComponentType<RendererInstanceInUse>();
             int destinationExtensionType = schema.GetArrayType<DestinationExtension>();
             int pluginType = schema.GetComponentType<RenderEnginePluginFunction>();
-            if (context.IsSimulatorWorld(world))
-            {
-                CollectPlugins(world, pluginType);
-            }
-
+            CollectPlugins(world, pluginType);
             DestroyOldSystems(world);
             CreateRenderMachines(world, destinationType, rendererInstanceInUseType, destinationExtensionType);
-            CreateSurfaces(world, surfaceInUseType);
+            AssignSurfaces(world, surfaceInUseType);
             CollectComponents(world, rendererType, materialType, shaderType, meshType);
             CollectRenderers(world, viewportType);
-            Render(world, destinationType, surfaceInUseType);
-        }
-
-        readonly void ISystem.Finish(in SystemContext context, in World world)
-        {
+            Render(world, destinationType);
         }
 
         /// <summary>
         /// Makes the given render system type available for use at runtime,
         /// for destinations that reference its label.
         /// </summary>
-        public readonly void RegisterRenderingBackend<T>() where T : unmanaged, IRenderingBackend
+        public void RegisterRenderingBackend<T>(T renderingBackend) where T : RenderingBackend
         {
-            ASCIIText256 label = default(T).Label;
-            long hash = label.GetLongHashCode();
-            if (availableBackends.ContainsKey(hash))
+            RendererLabel label = new(renderingBackend.Label);
+            if (availableBackends.ContainsKey(label))
             {
-                throw new InvalidOperationException($"Label `{label}` already has a render system registered for");
+                throw new InvalidOperationException($"Label `{renderingBackend.Label.ToString()}` already has a render system registered for");
             }
 
-            RenderingBackend systemCreator = RenderingBackend.Create<T>();
-            availableBackends.Add(hash, systemCreator);
+            availableBackends.Add(label, renderingBackend);
         }
 
-        private readonly void CreateRenderMachines(World world, int destinationType, int rendererInstanceType, int destinationExtensionType)
+        public T UnregisterRenderingBackend<T>(bool dispose = true) where T : RenderingBackend
+        {
+            RendererLabel label = default;
+            foreach (System.Collections.Generic.KeyValuePair<RendererLabel, RenderingBackend> pair in availableBackends)
+            {
+                if (pair.Value is T backend)
+                {
+                    label = pair.Key;
+                    break;
+                }
+            }
+
+            if (label == default)
+            {
+                throw new InvalidOperationException($"Rendering backend of type {typeof(T)} not found to unregister");
+            }
+
+            availableBackends.Remove(label, out RenderingBackend? renderingBackend);
+            if (dispose)
+            {
+                renderingBackend!.Dispose();
+            }
+
+            return (T)renderingBackend!;
+        }
+
+        private void CreateRenderMachines(World world, int destinationType, int rendererInstanceType, int destinationExtensionType)
         {
             foreach (Chunk chunk in world.Chunks)
             {
@@ -115,30 +134,26 @@ namespace Rendering.Systems
                     for (int i = 0; i < entities.Length; i++)
                     {
                         ref IsDestination component = ref components[i];
-                        Destination entity = Entity.Get<Destination>(world, entities[i]);
-                        if (knownDestinations.Contains(entity))
+                        Destination destination = Entity.Get<Destination>(world, entities[i]);
+                        if (knownDestinations.Contains(destination))
                         {
                             return;
                         }
 
-                        CreateRenderMachineForDestination(entity, component, rendererInstanceType, destinationExtensionType);
+                        CreateRenderMachineForDestination(destination, component.rendererLabel, rendererInstanceType, destinationExtensionType);
                     }
                 }
             }
         }
 
-        private readonly void CreateRenderMachineForDestination(Destination entity, IsDestination destination, int rendererInstanceType, int destinationExtensionType)
+        private void CreateRenderMachineForDestination(Destination destination, RendererLabel label, int rendererInstanceType, int destinationExtensionType)
         {
-            ASCIIText256 label = destination.rendererLabel;
-            long hash = label.GetLongHashCode();
-            if (availableBackends.TryGetValue(hash, out RenderingBackend backend))
+            if (availableBackends.TryGetValue(label, out RenderingBackend? renderingBackend))
             {
-                ReadOnlySpan<DestinationExtension> extensions = entity.GetArray<DestinationExtension>(destinationExtensionType);
-                (MemoryAddress machine, MemoryAddress instance) = backend.create.Invoke(backend.allocation, entity, extensions);
-                RenderingMachine newRenderingMachine = new(backend, machine, instance);
-                renderingMachines.Add(entity, newRenderingMachine);
-                knownDestinations.Add(entity);
-                entity.AddComponent(rendererInstanceType, new RendererInstanceInUse(instance));
+                RenderingMachine renderingMachine = renderingBackend.CreateRenderingMachine(destination);
+                renderingMachines.Add(destination, renderingMachine);
+                knownDestinations.Add(destination);
+                destination.AddComponent(rendererInstanceType, new RendererInstanceInUse(renderingMachine.Instance));
                 Trace.WriteLine($"Created render system for destination `{destination}` with label `{label}`");
             }
             else
@@ -147,7 +162,7 @@ namespace Rendering.Systems
             }
         }
 
-        private readonly void CollectComponents(World world, int rendererType, int materialType, int shaderType, int meshType)
+        private void CollectComponents(World world, int rendererType, int materialType, int shaderType, int meshType)
         {
             int capacity = (world.MaxEntityValue + 1).GetNextPowerOf2();
             if (this.entityComponents.Length < capacity)
@@ -202,7 +217,7 @@ namespace Rendering.Systems
             }
         }
 
-        private readonly void CollectRenderers(World world, int viewportType)
+        private void CollectRenderers(World world, int viewportType)
         {
             //collect renderers and store them with the viewports that they render to
             foreach (Chunk chunk in world.Chunks)
@@ -223,8 +238,7 @@ namespace Rendering.Systems
                         }
 
                         Destination destination = Entity.Get<Destination>(world, destinationEntity);
-                        ref RenderingMachine renderingMachine = ref renderingMachines.TryGetValue(destination, out bool containsRenderingMachine);
-                        if (containsRenderingMachine)
+                        if (renderingMachines.TryGetValue(destination, out RenderingMachine? renderingMachine))
                         {
                             ref ViewportGroup viewportGroup = ref renderingMachine.viewportGroups.TryGetValue(viewportEntity, out bool containsViewportGroup);
                             if (!containsViewportGroup)
@@ -313,7 +327,7 @@ namespace Rendering.Systems
             }
         }
 
-        private readonly void CollectPlugins(World world, int pluginType)
+        private void CollectPlugins(World world, int pluginType)
         {
             pluginFunctions.Clear();
             foreach (Chunk chunk in world.Chunks)
@@ -331,7 +345,7 @@ namespace Rendering.Systems
             }
         }
 
-        private readonly void CreateSurfaces(World world, int surfaceInUseType)
+        private void AssignSurfaces(World world, int surfaceInUseType)
         {
             foreach (Destination destination in knownDestinations)
             {
@@ -341,50 +355,48 @@ namespace Rendering.Systems
                 }
 
                 //notify the entity that surface has been created
-                ref RenderingMachine renderingMachine = ref renderingMachines[destination];
-                if (!renderingMachine.hasSurface)
+                if (!destinationsWithSurfaces.Contains(destination))
                 {
                     if (destination.TryGetComponent(surfaceInUseType, out SurfaceInUse surfaceInUse))
                     {
-                        renderingMachine.hasSurface = true;
+                        destinationsWithSurfaces.Add(destination);
+                        RenderingMachine renderingMachine = renderingMachines[destination];
                         renderingMachine.SurfaceCreated(surfaceInUse.value);
                     }
                 }
             }
         }
 
-        private readonly void Render(World world, int destinationType, int surfaceInUseType)
+        private void Render(World world, int destinationType)
         {
             ReadOnlySpan<Destination> knownDestinations = this.knownDestinations.AsSpan();
             foreach (Destination destination in knownDestinations)
             {
                 if (destination.world == world)
                 {
-                    if (!destination.ContainsComponent(surfaceInUseType))
-                    {
-                        continue; //no surface to render to yet
-                    }
-
                     ref IsDestination component = ref destination.GetComponent<IsDestination>(destinationType);
                     if (component.Area == 0)
                     {
                         continue; //no area to render to
                     }
 
-                    RenderingMachine renderingMachine = renderingMachines[destination];
-                    StatusCode statusCode = renderingMachine.BeginRender(component.clearColor);
-                    if (statusCode != StatusCode.Continue)
+                    if (destinationsWithSurfaces.Contains(destination))
                     {
-                        Trace.WriteLine($"Failed to begin rendering for destination `{destination}` because of status code `{statusCode}`");
-                        return;
+                        RenderingMachine renderingMachine = renderingMachines[destination];
+                        if (renderingMachine.BeginRender(component.clearColor))
+                        {
+                            Render(world, renderingMachine);
+                        }
+                        else
+                        {
+                            //skipped rendering
+                        }
                     }
-
-                    RenderDestination(world, renderingMachine);
                 }
             }
         }
 
-        private readonly void RenderDestination(World world, RenderingMachine renderingMachine)
+        private void Render(World world, RenderingMachine renderingMachine)
         {
             //sort viewports by their declared order
             Span<(uint viewportEntity, ViewportGroup viewportGroup)> viewportGroups = stackalloc (uint, ViewportGroup)[renderingMachine.viewportGroups.Count];
@@ -400,13 +412,13 @@ namespace Rendering.Systems
             for (int v = 0; v < viewportCount; v++)
             {
                 (uint viewportEntity, ViewportGroup viewportGroup) = viewportGroups[v];
-                RenderViewport(world, renderingMachine, viewportEntity, viewportGroup);
+                Render(world, renderingMachine, viewportEntity, viewportGroup);
             }
 
             renderingMachine.EndRender();
         }
 
-        private readonly void RenderViewport(World world, RenderingMachine renderingMachine, uint viewportEntity, ViewportGroup viewportGroup)
+        private void Render(World world, RenderingMachine renderingMachine, uint viewportEntity, ViewportGroup viewportGroup)
         {
             //sort material groups by their declared order
             Span<(sbyte renderGroup, List<RenderEntity> renderEntities)> materialGroups = stackalloc (sbyte, List<RenderEntity>)[viewportGroup.map.Count];
@@ -434,7 +446,7 @@ namespace Rendering.Systems
             }
         }
 
-        private readonly void DestroyOldSystems(World world)
+        private void DestroyOldSystems(World world)
         {
             for (int i = knownDestinations.Count - 1; i >= 0; i--)
             {
@@ -446,8 +458,8 @@ namespace Rendering.Systems
 
                 if (destination.IsDestroyed)
                 {
-                    renderingMachines.Remove(destination, out RenderingMachine machine);
-                    machine.Dispose();
+                    renderingMachines.Remove(destination, out RenderingMachine? renderingMachine);
+                    renderingMachine!.Dispose();
                     knownDestinations.RemoveAt(i);
                     Trace.WriteLine($"Removed render system for destination `{destination}`");
                 }

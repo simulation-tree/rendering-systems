@@ -93,9 +93,6 @@ jobs:
       - name: Set VERSION variable from tag
         run: echo "VERSION=${GITHUB_REF/refs\/tags\/v/}" >> $GITHUB_ENV
             
-      - name: Build `Rendering.Systems.Core`
-        run: dotnet build "${{ github.event.repository.name }}/core" -c Release /p:Version=${VERSION}
-      
       - name: Build `Rendering.Systems.Generator`
         run: dotnet build "${{ github.event.repository.name }}/generator" -c Release /p:Version=${VERSION}
       
@@ -108,9 +105,6 @@ jobs:
       - name: Test
         run: dotnet test "${{ github.event.repository.name }}/tests" -c Release --logger "trx"
             
-      - name: Pack `Rendering.Systems.Core`
-        run: dotnet pack "${{ github.event.repository.name }}/core" -c Release /p:Version=${VERSION} --no-build --output .
-      
       - name: Pack `Rendering.Systems.Generator`
         run: dotnet pack "${{ github.event.repository.name }}/generator" -c Release /p:Version=${VERSION} --no-build --output .
       
@@ -120,11 +114,6 @@ jobs:
       - name: Add NuGet Source
         run: dotnet nuget add source https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json --name github --username ${{ github.repository_owner }} --password ${{ github.token }} --store-password-in-clear-text
             
-      - name: Publish `Rendering.Systems.Core`
-        run: dotnet nuget push Rendering.Systems.Core.${VERSION}.nupkg --source github --api-key ${NUGET_TOKEN}
-        env:
-          NUGET_TOKEN: ${{ secrets.NUGET_TOKEN }}
-      
       - name: Publish `Rendering.Systems.Generator`
         run: dotnet nuget push Rendering.Systems.Generator.${VERSION}.nupkg --source github --api-key ${NUGET_TOKEN}
         env:
