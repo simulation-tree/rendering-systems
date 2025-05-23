@@ -2,6 +2,7 @@
 using Meshes;
 using Rendering.Components;
 using Shaders;
+using Simulation;
 
 namespace Rendering.Systems.Tests
 {
@@ -10,7 +11,7 @@ namespace Rendering.Systems.Tests
         [Test]
         public void CheckInitialization()
         {
-            simulator.Add(new RenderingSystems(simulator));
+            Simulator.Add(new RenderingSystems(Simulator));
 
             Assert.That(TestRendererBackend.initialized, Is.False);
 
@@ -18,7 +19,7 @@ namespace Rendering.Systems.Tests
 
             Assert.That(TestRendererBackend.initialized, Is.True);
 
-            simulator.Remove<RenderingSystems>();
+            Simulator.Remove<RenderingSystems>();
 
             Assert.That(TestRendererBackend.initialized, Is.False);
         }
@@ -28,17 +29,17 @@ namespace Rendering.Systems.Tests
         {
             Destination testDestination = new(world, new(200, 200), "test");
 
-            simulator.Add(new RenderingSystems(simulator));
+            Simulator.Add(new RenderingSystems(Simulator));
             TestRendererBackend testRendererBackend = new();
             RegisterRenderingBackend(testRendererBackend);
 
-            Update();
+            Simulator.Update();
 
             Assert.That(testRendererBackend.renderingMachines.Count, Is.EqualTo(1));
             TestRenderer testRenderer = testRendererBackend.renderingMachines[0];
             Assert.That(testRenderer.destination, Is.EqualTo(testDestination));
 
-            simulator.Remove<RenderingSystems>();
+            Simulator.Remove<RenderingSystems>();
         }
 
         [Test]
@@ -47,7 +48,7 @@ namespace Rendering.Systems.Tests
             Destination destination = new(world, new(200, 200), "test");
             destination.AddComponent(new SurfaceInUse());
 
-            simulator.Add(new RenderingSystems(simulator));
+            Simulator.Add(new RenderingSystems(Simulator));
             TestRendererBackend testRendererBackend = new();
             RegisterRenderingBackend(testRendererBackend);
 
@@ -58,7 +59,7 @@ namespace Rendering.Systems.Tests
             MeshRenderer meshRenderer = new(world, mesh, material);
             Viewport viewport = new(world, destination);
 
-            Update();
+            Simulator.Update();
 
             Assert.That(testRendererBackend.renderingMachines.Count, Is.EqualTo(1));
             TestRenderer testRenderer = testRendererBackend.renderingMachines[0];
@@ -66,11 +67,11 @@ namespace Rendering.Systems.Tests
             Assert.That(testRenderer.entities.Count, Is.EqualTo(1));
 
             meshRenderer.IsEnabled = false;
-            Update();
+            Simulator.Update();
 
             Assert.That(testRenderer.entities.Count, Is.EqualTo(0));
 
-            simulator.Remove<RenderingSystems>();
+            Simulator.Remove<RenderingSystems>();
         }
 
         [Test]
@@ -79,7 +80,7 @@ namespace Rendering.Systems.Tests
             Destination destination = new(world, new(200, 200), "test");
             destination.AddComponent(new SurfaceInUse());
 
-            simulator.Add(new RenderingSystems(simulator));
+            Simulator.Add(new RenderingSystems(Simulator));
             TestRendererBackend testRendererBackend = new();
             RegisterRenderingBackend(testRendererBackend);
 
@@ -90,7 +91,7 @@ namespace Rendering.Systems.Tests
             MeshRenderer meshRenderer = new(world, mesh, material);
             Viewport viewport = new(world, destination);
 
-            Update();
+            Simulator.Update();
 
             Assert.That(testRendererBackend.renderingMachines.Count, Is.EqualTo(1));
 
@@ -103,18 +104,18 @@ namespace Rendering.Systems.Tests
 
             meshRenderer.Dispose();
 
-            Update();
+            Simulator.Update();
 
             Assert.That(testRenderer.entities.Count, Is.EqualTo(0));
 
             meshRenderer = new(world, mesh, material);
 
-            Update();
+            Simulator.Update();
 
             Assert.That(testRenderer.entities.Count, Is.EqualTo(1));
             Assert.That(testRenderer.entities[0], Is.EqualTo(firstEntity));
 
-            simulator.Remove<RenderingSystems>();
+            Simulator.Remove<RenderingSystems>();
         }
     }
 }

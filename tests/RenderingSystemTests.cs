@@ -21,7 +21,7 @@ namespace Rendering.Systems.Tests
 
         protected void RegisterRenderingBackend<T>(T renderingBackend) where T : RenderingBackend
         {
-            if (simulator.TryGetFirst(out RenderingSystems? renderingSystems))
+            if (Simulator.TryGetFirst(out RenderingSystems? renderingSystems))
             {
                 renderingSystems.RegisterRenderingBackend(renderingBackend);
             }
