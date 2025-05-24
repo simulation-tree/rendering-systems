@@ -5,11 +5,21 @@ namespace Rendering.Systems.Tests
 {
     public class ScissorViewTests : RenderingSystemTests
     {
+        protected override void SetUp()
+        {
+            base.SetUp();
+            Simulator.Add(new ClampNestedScissorViews(Simulator));
+        }
+
+        protected override void TearDown()
+        {
+            Simulator.Remove<ClampNestedScissorViews>();
+            base.TearDown();
+        }
+
         [Test]
         public void VerifyClampedScissor()
         {
-            Simulator.Add(new ClampNestedScissorViews());
-
             uint parentScissor = world.CreateEntity();
             uint childScissor = world.CreateEntity();
             world.SetParent(childScissor, parentScissor);
@@ -22,15 +32,11 @@ namespace Rendering.Systems.Tests
             WorldRendererScissor child = world.GetComponent<WorldRendererScissor>(childScissor);
             Assert.That(parent.value, Is.EqualTo(new Vector4(0, 0, 100, 100)));
             Assert.That(child.value, Is.EqualTo(new Vector4(50, 50, 50, 50)));
-
-            Simulator.Remove<ClampNestedScissorViews>();
         }
 
         [Test]
         public void OutOfBoundsChildScissor()
         {
-            Simulator.Add(new ClampNestedScissorViews());
-
             uint parentScissor = world.CreateEntity();
             uint childScissor = world.CreateEntity();
             world.SetParent(childScissor, parentScissor);
@@ -43,15 +49,11 @@ namespace Rendering.Systems.Tests
             WorldRendererScissor child = world.GetComponent<WorldRendererScissor>(childScissor);
             Assert.That(parent.value, Is.EqualTo(new Vector4(0, 0, 100, 100)));
             Assert.That(child.value, Is.EqualTo(new Vector4(0, 100, 100, 0)));
-
-            Simulator.Remove<ClampNestedScissorViews>();
         }
 
         [Test]
         public void DeepNestedChildren()
         {
-            Simulator.Add(new ClampNestedScissorViews());
-
             uint rootScissor = world.CreateEntity();
             uint parentScissor = world.CreateEntity();
             uint childScissor = world.CreateEntity();
@@ -69,15 +71,11 @@ namespace Rendering.Systems.Tests
             Assert.That(root.value, Is.EqualTo(new Vector4(0, 0, 100, 100)));
             Assert.That(parent.value, Is.EqualTo(new Vector4(50, 50, 50, 50)));
             Assert.That(child.value, Is.EqualTo(new Vector4(50, 50, 25, 25)));
-
-            Simulator.Remove<ClampNestedScissorViews>();
         }
 
         [Test]
         public void VerifyDeepDescendant()
         {
-            Simulator.Add(new ClampNestedScissorViews());
-
             uint rootEntity = world.CreateEntity();
             uint parentScissor = world.CreateEntity();
             uint childScissor = world.CreateEntity();
@@ -92,8 +90,6 @@ namespace Rendering.Systems.Tests
             WorldRendererScissor child = world.GetComponent<WorldRendererScissor>(childScissor);
             Assert.That(root.value, Is.EqualTo(new Vector4(0, 0, 100, 100)));
             Assert.That(child.value, Is.EqualTo(new Vector4(50, 50, 50, 50)));
-
-            Simulator.Remove<ClampNestedScissorViews>();
         }
     }
 }

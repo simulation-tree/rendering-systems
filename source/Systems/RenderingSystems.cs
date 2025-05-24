@@ -12,9 +12,9 @@ namespace Rendering.Systems
         {
             this.simulator = simulator;
 
-            renderEngine = new();
+            renderEngine = new(simulator);
             simulator.Add(renderEngine);
-            simulator.Add(new ClampNestedScissorViews());
+            simulator.Add(new ClampNestedScissorViews(simulator));
         }
 
         public void Dispose()

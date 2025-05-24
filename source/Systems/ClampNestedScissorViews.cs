@@ -16,14 +16,20 @@ namespace Rendering.Systems
         private readonly List<List<uint>> sortedEntities;
         private readonly Array<uint> parentEntities;
         private readonly Operation operation;
+        private readonly int scissorComponent;
+        private readonly int worldScissorComponent;
 
-        public ClampNestedScissorViews()
+        public ClampNestedScissorViews(Simulator simulator)
         {
             scissors = new(4);
             hasScissor = new(4);
             sortedEntities = new(4);
             parentEntities = new(4);
             operation = new();
+
+            Schema schema = simulator.world.Schema;
+            scissorComponent = schema.GetComponentType<RendererScissor>();
+            worldScissorComponent = schema.GetComponentType<WorldRendererScissor>();
         }
 
         public void Dispose()
@@ -62,8 +68,6 @@ namespace Rendering.Systems
             }
 
             //add missing world scissor component
-            int scissorComponent = world.Schema.GetComponentType<RendererScissor>();
-            int worldScissorComponent = world.Schema.GetComponentType<WorldRendererScissor>();
             foreach (Chunk chunk in world.Chunks)
             {
                 Definition definition = chunk.Definition;

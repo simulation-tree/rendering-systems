@@ -22,8 +22,18 @@ namespace Rendering.Systems
         private readonly System.Collections.Generic.Dictionary<Destination, RenderingMachine> renderingMachines;
         private readonly Array<EntityComponents> entityComponents;
         private readonly List<RenderEnginePluginFunction> pluginFunctions;
+        private readonly int destinationType;
+        private readonly int rendererType;
+        private readonly int viewportType;
+        private readonly int materialType;
+        private readonly int shaderType;
+        private readonly int meshType;
+        private readonly int surfaceInUseType;
+        private readonly int rendererInstanceInUseType;
+        private readonly int destinationExtensionType;
+        private readonly int pluginType;
 
-        public RenderEngineSystem()
+        public RenderEngineSystem(Simulator simulator)
         {
             knownDestinations = new(4);
             destinationsWithSurfaces = new(4);
@@ -31,6 +41,18 @@ namespace Rendering.Systems
             renderingMachines = new(4);
             entityComponents = new(4);
             pluginFunctions = new(4);
+
+            Schema schema = simulator.world.Schema;
+            destinationType = schema.GetComponentType<IsDestination>();
+            rendererType = schema.GetComponentType<IsRenderer>();
+            viewportType = schema.GetComponentType<IsViewport>();
+            materialType = schema.GetComponentType<IsMaterial>();
+            shaderType = schema.GetComponentType<IsShader>();
+            meshType = schema.GetComponentType<IsMesh>();
+            surfaceInUseType = schema.GetComponentType<SurfaceInUse>();
+            rendererInstanceInUseType = schema.GetComponentType<RendererInstanceInUse>();
+            destinationExtensionType = schema.GetArrayType<DestinationExtension>();
+            pluginType = schema.GetComponentType<RenderEnginePluginFunction>();
         }
 
         public void Dispose()
@@ -62,16 +84,6 @@ namespace Rendering.Systems
         {
             World world = simulator.world;
             Schema schema = world.Schema;
-            int destinationType = schema.GetComponentType<IsDestination>();
-            int rendererType = schema.GetComponentType<IsRenderer>();
-            int viewportType = schema.GetComponentType<IsViewport>();
-            int materialType = schema.GetComponentType<IsMaterial>();
-            int shaderType = schema.GetComponentType<IsShader>();
-            int meshType = schema.GetComponentType<IsMesh>();
-            int surfaceInUseType = schema.GetComponentType<SurfaceInUse>();
-            int rendererInstanceInUseType = schema.GetComponentType<RendererInstanceInUse>();
-            int destinationExtensionType = schema.GetArrayType<DestinationExtension>();
-            int pluginType = schema.GetComponentType<RenderEnginePluginFunction>();
             CollectPlugins(world, pluginType);
             DestroyOldSystems(world);
             CreateRenderMachines(world, destinationType, rendererInstanceInUseType, destinationExtensionType);
