@@ -9,18 +9,14 @@ namespace Rendering.Systems.Tests
     {
         public readonly Array<DestinationExtension> extensionNames;
         public readonly List<RenderEntity> entities;
-        public readonly MemoryAddress instance;
         public sbyte renderGroup;
         public Vector4 clearColor;
         public MemoryAddress surface;
         public bool finishedRendering;
 
-        public override MemoryAddress Instance => instance;
-
-        public TestRenderer(Destination destination, ReadOnlySpan<DestinationExtension> extensionNames) : base(destination)
+        public TestRenderer(Destination destination, MemoryAddress instance, ReadOnlySpan<DestinationExtension> extensionNames) : base(destination, instance)
         {
             this.extensionNames = new(extensionNames);
-            instance = MemoryAddress.AllocateValue(1000);
             entities = new();
         }
 
@@ -29,10 +25,9 @@ namespace Rendering.Systems.Tests
             return true;
         }
 
-        public override void Dispose()
+        public void Dispose()
         {
             entities.Dispose();
-            instance.Dispose();
             extensionNames.Dispose();
         }
 

@@ -1,9 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using Unmanaged;
 
 namespace Rendering.Systems.Tests
 {
-    public class TestRendererBackend : RenderingBackend
+    public class TestRendererBackend : RenderingBackend<TestRenderer>
     {
         public static bool initialized;
         public readonly List<TestRenderer> renderingMachines = new();
@@ -20,11 +21,17 @@ namespace Rendering.Systems.Tests
             initialized = false;
         }
 
-        public override RenderingMachine CreateRenderingMachine(Destination destination)
+        public override TestRenderer Create(Destination destination)
         {
-            TestRenderer renderingMachine = new(destination, destination.Extensions);
+            TestRenderer renderingMachine = new(destination, MemoryAddress.AllocateValue(1337), destination.Extensions);
             renderingMachines.Add(renderingMachine);
             return renderingMachine;
+        }
+
+        public override void Dispose(TestRenderer renderingMachine)
+        {
+            renderingMachine.instance.Dispose();
+            renderingMachine.Dispose();
         }
     }
 }

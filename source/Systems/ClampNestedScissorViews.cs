@@ -1,5 +1,6 @@
 ﻿using Collections.Generic;
 using Rendering.Components;
+using Rendering.Messages;
 using Simulation;
 using System;
 using System.Numerics;
@@ -9,30 +10,32 @@ using Worlds;
 
 namespace Rendering.Systems
 {
-    public class ClampNestedScissorViews : ISystem, IDisposable
+    public partial class ClampNestedScissorViews : SystemBase, IListener<RenderUpdate>
     {
+        private readonly World world;
         private readonly Array<Vector4> scissors;
         private readonly Array<bool> hasScissor;
         private readonly List<List<uint>> sortedEntities;
         private readonly Array<uint> parentEntities;
         private readonly Operation operation;
-        private readonly int scissorComponent;
-        private readonly int worldScissorComponent;
+        private readonly int localScissorType;
+        private readonly int worldScissorType;
 
-        public ClampNestedScissorViews(Simulator simulator)
+        public ClampNestedScissorViews(Simulator simulator, World world) : base(simulator)
         {
+            this.world = world;
             scissors = new(4);
             hasScissor = new(4);
             sortedEntities = new(4);
             parentEntities = new(4);
-            operation = new();
+            operation = new(world);
 
-            Schema schema = simulator.world.Schema;
-            scissorComponent = schema.GetComponentType<RendererScissor>();
-            worldScissorComponent = schema.GetComponentType<WorldRendererScissor>();
+            Schema schema = world.Schema;
+            localScissorType = schema.GetComponentType<RendererScissor>();
+            worldScissorType = schema.GetComponentType<WorldRendererScissor>();
         }
 
-        public void Dispose()
+        public override void Dispose()
         {
             foreach (List<uint> entities in sortedEntities)
             {
@@ -46,10 +49,9 @@ namespace Rendering.Systems
             scissors.Dispose();
         }
 
-        void ISystem.Update(Simulator simulator, double deltaTime)
+        void IListener<RenderUpdate>.Receive(ref RenderUpdate message)
         {
             //prepare buffers
-            World world = simulator.world;
             int capacity = (world.MaxEntityValue + 1).GetNextPowerOf2();
             if (scissors.Length < capacity)
             {
@@ -62,48 +64,57 @@ namespace Rendering.Systems
             hasScissor.Clear();
             parentEntities.Clear();
 
-            foreach (List<uint> entities in sortedEntities)
+            Span<Vector4> scissorsSpan = scissors.AsSpan();
+            Span<bool> hasScissorSpan = hasScissor.AsSpan();
+            Span<uint> parentEntitiesSpan = parentEntities.AsSpan();
+            Span<List<uint>> sortedEntitiesSpan = sortedEntities.AsSpan();
+            for (int d = 0; d < sortedEntitiesSpan.Length; d++)
             {
-                entities.Clear();
+                sortedEntitiesSpan[d].Clear();
             }
 
             //add missing world scissor component
-            foreach (Chunk chunk in world.Chunks)
+            ReadOnlySpan<Chunk> chunks = world.Chunks;
+            for (int c = 0; c < chunks.Length; c++)
             {
-                Definition definition = chunk.Definition;
-                if (definition.ContainsComponent(scissorComponent) && !definition.ContainsComponent(worldScissorComponent))
+                Chunk chunk = chunks[c];
+                if (chunk.Count > 0)
                 {
-                    operation.SelectEntities(chunk.Entities);
+                    Definition definition = chunk.Definition;
+                    if (definition.ContainsComponent(localScissorType) && !definition.ContainsComponent(worldScissorType))
+                    {
+                        operation.AppendMultipleEntitiesToSelection(chunk.Entities);
+                    }
                 }
             }
 
             if (operation.Count > 0)
             {
                 operation.AddComponentType<WorldRendererScissor>();
-                operation.Perform(world);
+                operation.Perform();
                 operation.Reset();
             }
 
             //gather values for later
             foreach (uint child in world.Entities)
             {
-                uint parent = world.GetParent(child);
-                parentEntities[(int)child] = parent;
+                parentEntitiesSpan[(int)child] = world.GetParent(child);
             }
 
-            foreach (Chunk chunk in world.Chunks)
+            chunks = world.Chunks;
+            for (int c = 0; c < chunks.Length; c++)
             {
-                Definition definition = chunk.Definition;
-                if (definition.ContainsComponent(scissorComponent))
+                Chunk chunk = chunks[c];
+                if (chunk.Definition.ContainsComponent(localScissorType))
                 {
                     ReadOnlySpan<uint> entities = chunk.Entities;
-                    ComponentEnumerator<RendererScissor> components = chunk.GetComponents<RendererScissor>(scissorComponent);
+                    ComponentEnumerator<RendererScissor> components = chunk.GetComponents<RendererScissor>(localScissorType);
                     for (int i = 0; i < entities.Length; i++)
                     {
                         uint entity = entities[i];
-                        scissors[(int)entity] = components[i].value;
-                        hasScissor[(int)entity] = true;
-                        uint parent = parentEntities[(int)entity];
+                        scissorsSpan[(int)entity] = components[i].value;
+                        hasScissorSpan[(int)entity] = true;
+                        uint parent = parentEntitiesSpan[(int)entity];
                         int depth = 0;
                         while (parent != default)
                         {
@@ -113,33 +124,37 @@ namespace Rendering.Systems
 
                         while (sortedEntities.Count <= depth)
                         {
-                            sortedEntities.Add(new());
+                            sortedEntities.Add(new(32));
+                            sortedEntitiesSpan = sortedEntities.AsSpan();
                         }
 
-                        sortedEntities[depth].Add(entity);
+                        sortedEntitiesSpan[depth].Add(entity);
                     }
                 }
             }
 
             //do the thing
-            foreach (List<uint> entities in sortedEntities)
+            sortedEntitiesSpan = sortedEntities.AsSpan();
+            for (int d = 0; d < sortedEntitiesSpan.Length; d++)
             {
-                foreach (uint entity in entities)
+                Span<uint> entities = sortedEntitiesSpan[d].AsSpan();
+                for (int i = 0; i < entities.Length; i++)
                 {
-                    uint parent = parentEntities[(int)entity];
+                    uint entity = entities[i];
+                    uint parent = parentEntitiesSpan[(int)entity];
                     Vector4 parentScissor = default;
                     bool foundParentScissor = false;
                     while (parent != default)
                     {
-                        if (hasScissor[(int)parent])
+                        if (hasScissorSpan[(int)parent])
                         {
-                            parentScissor = scissors[(int)parent];
+                            parentScissor = scissorsSpan[(int)parent];
                             foundParentScissor = true;
                             break;
                         }
                         else
                         {
-                            parent = parentEntities[(int)parent];
+                            parent = parentEntitiesSpan[(int)parent];
                         }
                     }
 
@@ -150,7 +165,7 @@ namespace Rendering.Systems
                         float parentMaxX = parentScissor.X + parentScissor.Z;
                         float parentMaxY = parentScissor.Y + parentScissor.W;
 
-                        ref Vector4 scissor = ref scissors[(int)entity];
+                        ref Vector4 scissor = ref scissorsSpan[(int)entity];
                         float minX = scissor.X;
                         float minY = scissor.Y;
                         float maxX = scissor.X + scissor.Z;
@@ -171,17 +186,18 @@ namespace Rendering.Systems
             }
 
             //apply values
-            foreach (Chunk chunk in world.Chunks)
+            chunks = world.Chunks;
+            for (int c = 0; c < chunks.Length; c++)
             {
+                Chunk chunk = chunks[c];
                 Definition definition = chunk.Definition;
-                if (definition.ContainsComponent(worldScissorComponent))
+                if (definition.ContainsComponent(worldScissorType))
                 {
                     ReadOnlySpan<uint> entities = chunk.Entities;
-                    ComponentEnumerator<WorldRendererScissor> components = chunk.GetComponents<WorldRendererScissor>(worldScissorComponent);
+                    ComponentEnumerator<WorldRendererScissor> components = chunk.GetComponents<WorldRendererScissor>(worldScissorType);
                     for (int i = 0; i < entities.Length; i++)
                     {
-                        uint entity = entities[i];
-                        components[i].value = scissors[(int)entity];
+                        components[i].value = scissors[(int)entities[i]];
                     }
                 }
             }

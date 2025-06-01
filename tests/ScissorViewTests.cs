@@ -5,18 +5,6 @@ namespace Rendering.Systems.Tests
 {
     public class ScissorViewTests : RenderingSystemTests
     {
-        protected override void SetUp()
-        {
-            base.SetUp();
-            Simulator.Add(new ClampNestedScissorViews(Simulator));
-        }
-
-        protected override void TearDown()
-        {
-            Simulator.Remove<ClampNestedScissorViews>();
-            base.TearDown();
-        }
-
         [Test]
         public void VerifyClampedScissor()
         {
@@ -26,7 +14,7 @@ namespace Rendering.Systems.Tests
             world.AddComponent(parentScissor, new RendererScissor(0, 0, 100, 100));
             world.AddComponent(childScissor, new RendererScissor(50, 50, 100, 100));
 
-            Simulator.Update();
+            Update();
 
             WorldRendererScissor parent = world.GetComponent<WorldRendererScissor>(parentScissor);
             WorldRendererScissor child = world.GetComponent<WorldRendererScissor>(childScissor);
@@ -43,7 +31,7 @@ namespace Rendering.Systems.Tests
             world.AddComponent(parentScissor, new RendererScissor(0, 0, 100, 100));
             world.AddComponent(childScissor, new RendererScissor(0, 200, 100, 20));
 
-            Simulator.Update();
+            Update();
 
             WorldRendererScissor parent = world.GetComponent<WorldRendererScissor>(parentScissor);
             WorldRendererScissor child = world.GetComponent<WorldRendererScissor>(childScissor);
@@ -63,7 +51,7 @@ namespace Rendering.Systems.Tests
             world.AddComponent(parentScissor, new RendererScissor(50, 50, 100, 100));
             world.AddComponent(childScissor, new RendererScissor(25, 25, 50, 50));
 
-            Simulator.Update();
+            Update();
 
             WorldRendererScissor root = world.GetComponent<WorldRendererScissor>(rootScissor);
             WorldRendererScissor parent = world.GetComponent<WorldRendererScissor>(parentScissor);
@@ -84,7 +72,7 @@ namespace Rendering.Systems.Tests
             world.AddComponent(rootEntity, new RendererScissor(0, 0, 100, 100));
             world.AddComponent(childScissor, new RendererScissor(50, 50, 100, 100));
 
-            Simulator.Update();
+            Update();
 
             WorldRendererScissor root = world.GetComponent<WorldRendererScissor>(rootEntity);
             WorldRendererScissor child = world.GetComponent<WorldRendererScissor>(childScissor);

@@ -1,31 +1,24 @@
 ﻿using Simulation;
-using System;
+using Worlds;
 
 namespace Rendering.Systems
 {
-    public class RenderingSystems : ISystem, IDisposable
+    public class RenderingSystems : SystemBase
     {
-        private readonly Simulator simulator;
         private readonly RenderEngineSystem renderEngine;
 
-        public RenderingSystems(Simulator simulator)
+        public RenderingSystems(Simulator simulator, World world) : base(simulator)
         {
-            this.simulator = simulator;
-
-            renderEngine = new(simulator);
+            renderEngine = new(simulator, world);
             simulator.Add(renderEngine);
-            simulator.Add(new ClampNestedScissorViews(simulator));
+            simulator.Add(new ClampNestedScissorViews(simulator, world));
         }
 
-        public void Dispose()
+        public override void Dispose()
         {
             simulator.Remove<ClampNestedScissorViews>();
             simulator.Remove(renderEngine);
             renderEngine.Dispose();
-        }
-
-        void ISystem.Update(Simulator simulator, double deltaTime)
-        {
         }
 
         public void RegisterRenderingBackend<T>(T renderingBackend) where T : RenderingBackend
@@ -33,9 +26,9 @@ namespace Rendering.Systems
             renderEngine.RegisterRenderingBackend(renderingBackend);
         }
 
-        public T UnregisterRenderingBackend<T>(bool dispose = true) where T : RenderingBackend
+        public void UnregisterRenderingBackend<T>() where T : RenderingBackend
         {
-            return renderEngine.UnregisterRenderingBackend<T>(dispose);
+            renderEngine.UnregisterRenderingBackend<T>();
         }
     }
 }

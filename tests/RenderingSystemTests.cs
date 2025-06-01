@@ -1,5 +1,6 @@
 ﻿using Materials;
 using Meshes;
+using Rendering.Messages;
 using Shaders;
 using Simulation.Tests;
 using Types;
@@ -9,6 +10,8 @@ namespace Rendering.Systems.Tests
 {
     public abstract class RenderingSystemTests : SimulationTests
     {
+        public World world;
+
         //todo: test for multiple viewports (and having them sorted)
         //todo: test for customizing renderer entities sorted by their material
         static RenderingSystemTests()
@@ -21,20 +24,38 @@ namespace Rendering.Systems.Tests
 
         protected void RegisterRenderingBackend<T>(T renderingBackend) where T : RenderingBackend
         {
-            if (Simulator.TryGetFirst(out RenderingSystems? renderingSystems))
-            {
-                renderingSystems.RegisterRenderingBackend(renderingBackend);
-            }
+            RenderingSystems renderingSystems = Simulator.GetFirst<RenderingSystems>();
+            renderingSystems.RegisterRenderingBackend(renderingBackend);
         }
 
-        protected override Schema CreateSchema()
+        protected void UnregisterRenderingBackend<T>() where T : RenderingBackend
         {
-            Schema schema = base.CreateSchema();
+            RenderingSystems renderingSystems = Simulator.GetFirst<RenderingSystems>();
+            renderingSystems.UnregisterRenderingBackend<T>();
+        }
+
+        protected override void SetUp()
+        {
+            base.SetUp();
+            Schema schema = new();
             schema.Load<MeshesSchemaBank>();
             schema.Load<MaterialsSchemaBank>();
             schema.Load<RenderingSchemaBank>();
             schema.Load<ShadersSchemaBank>();
-            return schema;
+            world = new(schema);
+            Simulator.Add(new RenderingSystems(Simulator, world));
+        }
+
+        protected override void TearDown()
+        {
+            Simulator.Remove<RenderingSystems>();
+            world.Dispose();
+            base.TearDown();
+        }
+
+        protected override void Update(double deltaTime)
+        {
+            Simulator.Broadcast(new RenderUpdate());
         }
     }
 }
