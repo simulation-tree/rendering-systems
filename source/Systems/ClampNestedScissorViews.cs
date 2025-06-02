@@ -16,7 +16,6 @@ namespace Rendering.Systems
         private readonly Array<Vector4> scissors;
         private readonly Array<bool> hasScissor;
         private readonly List<List<uint>> sortedEntities;
-        private readonly Array<uint> parentEntities;
         private readonly Operation operation;
         private readonly int localScissorType;
         private readonly int worldScissorType;
@@ -27,7 +26,6 @@ namespace Rendering.Systems
             scissors = new(4);
             hasScissor = new(4);
             sortedEntities = new(4);
-            parentEntities = new(4);
             operation = new(world);
 
             Schema schema = world.Schema;
@@ -43,7 +41,6 @@ namespace Rendering.Systems
             }
 
             operation.Dispose();
-            parentEntities.Dispose();
             sortedEntities.Dispose();
             hasScissor.Dispose();
             scissors.Dispose();
@@ -57,16 +54,23 @@ namespace Rendering.Systems
             {
                 scissors.Length = capacity;
                 hasScissor.Length = capacity;
-                parentEntities.Length = capacity;
             }
 
             scissors.Clear();
             hasScissor.Clear();
-            parentEntities.Clear();
+
+            int maxDepth = world.MaxDepth;
+            if (sortedEntities.Count <= maxDepth)
+            {
+                int toAdd = maxDepth - sortedEntities.Count;
+                for (int i = 0; i <= toAdd; i++)
+                {
+                    sortedEntities.Add(new(32));
+                }
+            }
 
             Span<Vector4> scissorsSpan = scissors.AsSpan();
             Span<bool> hasScissorSpan = hasScissor.AsSpan();
-            Span<uint> parentEntitiesSpan = parentEntities.AsSpan();
             Span<List<uint>> sortedEntitiesSpan = sortedEntities.AsSpan();
             for (int d = 0; d < sortedEntitiesSpan.Length; d++)
             {
@@ -96,12 +100,8 @@ namespace Rendering.Systems
             }
 
             //gather values for later
-            foreach (uint child in world.Entities)
-            {
-                parentEntitiesSpan[(int)child] = world.GetParent(child);
-            }
-
             chunks = world.Chunks;
+            ReadOnlySpan<Slot> slots = world.Slots;
             for (int c = 0; c < chunks.Length; c++)
             {
                 Chunk chunk = chunks[c];
@@ -114,34 +114,19 @@ namespace Rendering.Systems
                         uint entity = entities[i];
                         scissorsSpan[(int)entity] = components[i].value;
                         hasScissorSpan[(int)entity] = true;
-                        uint parent = parentEntitiesSpan[(int)entity];
-                        int depth = 0;
-                        while (parent != default)
-                        {
-                            depth++;
-                            parent = world.GetParent(parent);
-                        }
-
-                        while (sortedEntities.Count <= depth)
-                        {
-                            sortedEntities.Add(new(32));
-                            sortedEntitiesSpan = sortedEntities.AsSpan();
-                        }
-
-                        sortedEntitiesSpan[depth].Add(entity);
+                        sortedEntitiesSpan[slots[(int)entity].depth].Add(entity);
                     }
                 }
             }
 
             //do the thing
-            sortedEntitiesSpan = sortedEntities.AsSpan();
             for (int d = 0; d < sortedEntitiesSpan.Length; d++)
             {
                 Span<uint> entities = sortedEntitiesSpan[d].AsSpan();
                 for (int i = 0; i < entities.Length; i++)
                 {
                     uint entity = entities[i];
-                    uint parent = parentEntitiesSpan[(int)entity];
+                    uint parent = slots[(int)entity].parent;
                     Vector4 parentScissor = default;
                     bool foundParentScissor = false;
                     while (parent != default)
@@ -154,7 +139,7 @@ namespace Rendering.Systems
                         }
                         else
                         {
-                            parent = parentEntitiesSpan[(int)parent];
+                            parent = slots[(int)parent].parent;
                         }
                     }
 
@@ -186,18 +171,16 @@ namespace Rendering.Systems
             }
 
             //apply values
-            chunks = world.Chunks;
             for (int c = 0; c < chunks.Length; c++)
             {
                 Chunk chunk = chunks[c];
-                Definition definition = chunk.Definition;
-                if (definition.ContainsComponent(worldScissorType))
+                if (chunk.Definition.ContainsComponent(worldScissorType))
                 {
                     ReadOnlySpan<uint> entities = chunk.Entities;
                     ComponentEnumerator<WorldRendererScissor> components = chunk.GetComponents<WorldRendererScissor>(worldScissorType);
                     for (int i = 0; i < entities.Length; i++)
                     {
-                        components[i].value = scissors[(int)entities[i]];
+                        components[i].value = scissorsSpan[(int)entities[i]];
                     }
                 }
             }
