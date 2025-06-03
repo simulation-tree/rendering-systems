@@ -2,6 +2,7 @@
 using System;
 using System.Numerics;
 using Unmanaged;
+using Worlds;
 
 namespace Rendering.Systems
 {
@@ -12,6 +13,11 @@ namespace Rendering.Systems
     {
         internal RenderingBackend? renderingBackend;
         internal readonly Dictionary<uint, ViewportGroup> viewportGroups;
+
+        /// <summary>
+        /// The world this rendering machine is associated with.
+        /// </summary>
+        public readonly World world;
 
         /// <summary>
         /// The destination this rendering machine is responsible for.
@@ -25,6 +31,7 @@ namespace Rendering.Systems
 
         public RenderingMachine(Destination destination, MemoryAddress instance)
         {
+            this.world = destination.world;
             this.destination = destination;
             this.instance = instance;
             viewportGroups = new(4);
