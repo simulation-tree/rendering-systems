@@ -1,47 +1,46 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
-    <ImplicitUsings>disable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-    <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
-    <IsAotCompatible>True</IsAotCompatible>
-    <IsTrimmable>True</IsTrimmable>
-    <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
-    <Title>Rendering Systems</Title>
-    <Authors>popcron</Authors>
-    <Company>simulation-tree</Company>
-    <RepositoryUrl>https://github.com/simulation-tree/rendering-systems</RepositoryUrl>
-    <PackageReadmeFile>README.md</PackageReadmeFile>
-    <IncludeBuildOutput>false</IncludeBuildOutput>
-    <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
-  </PropertyGroup>
+    <PropertyGroup>
+        <TargetFramework>net9.0</TargetFramework>
+        <ImplicitUsings>disable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+        <IsAotCompatible>True</IsAotCompatible>
+        <IsTrimmable>True</IsTrimmable>
+        <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
+        <Title>Rendering Systems</Title>
+        <Authors>popcron</Authors>
+        <Company>simulation-tree</Company>
+        <RepositoryUrl>https://github.com/simulation-tree/rendering-systems</RepositoryUrl>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+        <IncludeBuildOutput>false</IncludeBuildOutput>
+        <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
+    </PropertyGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\..\collections\source\Collections.csproj"/>
-    <ProjectReference Include="..\..\materials\source\Materials.csproj"/>
-    <ProjectReference Include="..\..\meshes\source\Meshes.csproj"/>
-    <ProjectReference Include="..\..\rendering\source\Rendering.csproj"/>
-    <ProjectReference Include="..\..\shaders\source\Shaders.csproj"/>
-    <ProjectReference Include="..\..\simulation\core\Simulation.Core.csproj"/>
-    <ProjectReference Include="..\..\unmanaged\core\Unmanaged.Core.csproj"/>
-    <ProjectReference Include="..\..\worlds\core\Worlds.Core.csproj"/>
-    <ProjectReference Include="..\..\simulation\generator\Simulation.Generator.csproj">
-      <OutputItemType>Analyzer</OutputItemType>
-      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
-    </ProjectReference>
-    <ProjectReference Include="..\..\worlds\generator\Worlds.Generator.csproj">
-      <OutputItemType>Analyzer</OutputItemType>
-      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
-    </ProjectReference>
-  </ItemGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\..\collections\source\Collections.csproj" />
+        <ProjectReference Include="..\..\materials\source\Materials.csproj" />
+        <ProjectReference Include="..\..\meshes\source\Meshes.csproj" />
+        <ProjectReference Include="..\..\rendering\source\Rendering.csproj" />
+        <ProjectReference Include="..\..\shaders\source\Shaders.csproj" />
+        <ProjectReference Include="..\..\simulation\core\Simulation.Core.csproj" />
+        <ProjectReference Include="..\..\unmanaged\core\Unmanaged.Core.csproj" />
+        <ProjectReference Include="..\..\worlds\core\Worlds.Core.csproj" />
+        <ProjectReference Include="..\..\simulation\generator\Simulation.Generator.csproj">
+            <OutputItemType>Analyzer</OutputItemType>
+            <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+        </ProjectReference>
+        <ProjectReference Include="..\..\worlds\generator\Worlds.Generator.csproj">
+            <OutputItemType>Analyzer</OutputItemType>
+            <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+        </ProjectReference>
+    </ItemGroup>
 
-  <ItemGroup>
-    <Content Include="bin/Debug/net9.0/Rendering.Systems.dll" Pack="true" PackagePath="tools/debug/Rendering.Systems.dll" Visible="false"/>
-    <Content Include="bin/Debug/net9.0/Rendering.Systems.xml" Pack="true" PackagePath="tools/debug/Rendering.Systems.xml" Visible="false" Condition="Exists('bin/Debug/net9.0/Rendering.Systems.xml')"/>
-    <Content Include="bin/Release/net9.0/Rendering.Systems.dll" Pack="true" PackagePath="tools/release/Rendering.Systems.dll" Visible="false"/>
-    <Content Include="bin/Release/net9.0/Rendering.Systems.xml" Pack="true" PackagePath="tools/release/Rendering.Systems.xml" Visible="false" Condition="Exists('bin/Release/net9.0/Rendering.Systems.xml')"/>
-    <Content Include="build/Rendering.Systems.targets" Pack="true" PackagePath="build/Rendering.Systems.targets" Visible="false"/>
-  </ItemGroup>
+    <ItemGroup>
+        <None Include="..\README.md">
+            <Pack>True</Pack>
+            <PackagePath>\</PackagePath>
+        </None>
+    </ItemGroup>
 
 </Project>
