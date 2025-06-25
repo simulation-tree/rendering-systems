@@ -30,6 +30,7 @@ namespace Rendering.Systems.Tests
 
         public override void Dispose(TestRenderer renderingMachine)
         {
+            renderingMachines.Remove(renderingMachine);
             renderingMachine.instance.Dispose();
             renderingMachine.Dispose();
         }

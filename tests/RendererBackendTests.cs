@@ -95,5 +95,28 @@ namespace Rendering.Systems.Tests
             Assert.That(testRenderer.entities[0], Is.EqualTo(firstEntity));
             UnregisterRenderingBackend<TestRendererBackend>();
         }
+
+        [Test]
+        public void DestroyDestinationBeforeUnregistering()
+        {
+            Destination testDestination = new(world, new(200, 200), "test");
+
+            TestRendererBackend testRendererBackend = new();
+            RegisterRenderingBackend(testRendererBackend);
+
+            Update();
+
+            Assert.That(testRendererBackend.renderingMachines.Count, Is.EqualTo(1));
+            TestRenderer testRenderer = testRendererBackend.renderingMachines[0];
+            Assert.That(testRenderer.destination, Is.EqualTo(testDestination));
+
+            testDestination.Dispose();
+
+            Update();
+
+            Assert.That(testRendererBackend.renderingMachines.Count, Is.EqualTo(0));
+
+            UnregisterRenderingBackend<TestRendererBackend>();
+        }
     }
 }

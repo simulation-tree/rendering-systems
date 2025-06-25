@@ -67,14 +67,7 @@ namespace Rendering.Systems
             {
                 for (int m = rendererBackend.renderingMachines.Count - 1; m >= 0; m--)
                 {
-                    RenderingMachine renderingMachine = rendererBackend.renderingMachines[m];
-                    rendererBackend.DisposeRenderingMachine(renderingMachine);
-                    foreach (ViewportGroup viewportGroup in renderingMachine.viewportGroups.Values)
-                    {
-                        viewportGroup.Dispose();
-                    }
-
-                    renderingMachine.viewportGroups.Dispose();
+                    DisposeRenderingMachine(rendererBackend.renderingMachines[m]);
                 }
 
                 rendererBackend.renderingMachines.Clear();
@@ -90,7 +83,7 @@ namespace Rendering.Systems
         void IListener<RenderUpdate>.Receive(ref RenderUpdate message)
         {
             CollectPlugins();
-            DestroyOldSystems();
+            DestroyOldRenderingMachines();
             CreateRenderMachines();
             AssignSurfaces();
             CollectComponents();
@@ -127,17 +120,9 @@ namespace Rendering.Systems
 
             if (availableBackends.Remove(label, out RenderingBackend? renderingBackend))
             {
-                for (int i = renderingBackend.renderingMachines.Count - 1; i >= 0; i--)
+                for (int m = renderingBackend.renderingMachines.Count - 1; m >= 0; m--)
                 {
-                    RenderingMachine renderingMachine = renderingBackend.renderingMachines[i];
-                    renderingBackend.DisposeRenderingMachine(renderingMachine);
-                    foreach (ViewportGroup viewportGroup in renderingMachine.viewportGroups.Values)
-                    {
-                        viewportGroup.Dispose();
-                    }
-
-                    renderingMachine.viewportGroups.Dispose();
-                    renderingMachines.Remove(renderingMachine.destination.GetEntityValue());
+                    DisposeRenderingMachine(renderingBackend.renderingMachines[m]);
                 }
 
                 renderingBackend.renderingMachines.Clear();
@@ -178,6 +163,7 @@ namespace Rendering.Systems
             if (availableBackends.TryGetValue(destination.rendererLabel, out RenderingBackend? renderingBackend))
             {
                 RenderingMachine renderingMachine = renderingBackend.CreateRenderingMachine(Entity.Get<Destination>(world, destinationEntity));
+                renderingMachine.viewportGroups = new(4);
                 renderingMachine.renderingBackend = renderingBackend;
                 renderingMachines.Add(destinationEntity, renderingMachine);
                 knownDestinations.Add(destinationEntity);
@@ -474,24 +460,36 @@ namespace Rendering.Systems
             }
         }
 
-        private void DestroyOldSystems()
+        private void DestroyOldRenderingMachines()
         {
-            for (int i = knownDestinations.Count - 1; i >= 0; i--)
+            Span<uint> destinations = knownDestinations.AsSpan();
+            for (int i = destinations.Length - 1; i >= 0; i--)
             {
-                uint destinationEntity = knownDestinations[i];
-                if (!world.ContainsEntity(destinationEntity) && renderingMachines.Remove(destinationEntity, out RenderingMachine? renderingMachine))
+                uint destinationEntity = destinations[i];
+                if (!world.ContainsEntity(destinationEntity) && renderingMachines.TryGetValue(destinationEntity, out RenderingMachine? renderingMachine))
                 {
-                    renderingMachine.renderingBackend?.DisposeRenderingMachine(renderingMachine);
-                    foreach (ViewportGroup viewportGroup in renderingMachine.viewportGroups.Values)
-                    {
-                        viewportGroup.Dispose();
-                    }
-
-                    renderingMachine.viewportGroups.Dispose();
-                    knownDestinations.RemoveAt(i);
+                    DisposeRenderingMachine(renderingMachine);
                     Trace.WriteLine($"Removed render system for destination entity `{destinationEntity}`");
                 }
             }
+        }
+
+        private void DisposeRenderingMachine(RenderingMachine renderingMachine)
+        {
+            renderingMachine.ThrowIfDisposed();
+
+            renderingMachine.disposed = true;
+            foreach (ViewportGroup viewportGroup in renderingMachine.viewportGroups.Values)
+            {
+                viewportGroup.Dispose();
+            }
+
+            uint destinationEntity = renderingMachine.destination.GetEntityValue();
+            knownDestinations.Remove(destinationEntity);
+            renderingMachine.viewportGroups.Dispose();
+            renderingMachine.renderingBackend!.DisposeRenderingMachine(renderingMachine);
+            renderingMachine.renderingBackend!.renderingMachines.Remove(renderingMachine);
+            renderingMachines.Remove(destinationEntity);
         }
 
         private static int SortByViewportOrder((uint, ViewportGroup group) x, (uint, ViewportGroup group) y)

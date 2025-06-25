@@ -1,5 +1,6 @@
 ﻿using Collections.Generic;
 using System;
+using System.Diagnostics;
 using System.Numerics;
 using Unmanaged;
 using Worlds;
@@ -12,7 +13,8 @@ namespace Rendering.Systems
     public abstract class RenderingMachine
     {
         internal RenderingBackend? renderingBackend;
-        internal readonly Dictionary<uint, ViewportGroup> viewportGroups;
+        internal Dictionary<uint, ViewportGroup> viewportGroups;
+        internal bool disposed;
 
         /// <summary>
         /// The world this rendering machine is associated with.
@@ -34,7 +36,15 @@ namespace Rendering.Systems
             this.world = destination.world;
             this.destination = destination;
             this.instance = instance;
-            viewportGroups = new(4);
+        }
+
+        [Conditional("DEBUG")]
+        internal void ThrowIfDisposed()
+        {
+            if (disposed)
+            {
+                throw new ObjectDisposedException(nameof(RenderingMachine), "This rendering machine has already been disposed");
+            }
         }
 
         /// <summary>
