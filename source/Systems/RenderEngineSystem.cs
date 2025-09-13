@@ -136,10 +136,11 @@ namespace Rendering.Systems
 
         private void CreateRenderMachines()
         {
-            foreach (Chunk chunk in world.Chunks)
+            ReadOnlySpan<Chunk> chunks = world.Chunks;
+            for (int c = 0; c < chunks.Length; c++)
             {
-                Definition definition = chunk.Definition;
-                if (definition.ContainsComponent(destinationType))
+                Chunk chunk = chunks[c];
+                if (chunk.componentTypes.Contains(destinationType))
                 {
                     ReadOnlySpan<uint> entities = chunk.Entities;
                     ComponentEnumerator<IsDestination> components = chunk.GetComponents<IsDestination>(destinationType);
@@ -193,10 +194,9 @@ namespace Rendering.Systems
             for (int c = 0; c < chunks.Length; c++)
             {
                 Chunk chunk = chunks[c];
-                Definition definition = chunk.Definition;
-                BitMask componentTypes = definition.componentTypes;
+                BitMask componentTypes = chunk.componentTypes;
                 ReadOnlySpan<uint> entities = chunk.Entities;
-                if (componentTypes.Contains(rendererType) && !definition.IsDisabled)
+                if (componentTypes.Contains(rendererType) && !chunk.IsDisabled)
                 {
                     ComponentEnumerator<IsRenderer> components = chunk.GetComponents<IsRenderer>(rendererType);
                     for (int i = 0; i < entities.Length; i++)
@@ -241,8 +241,7 @@ namespace Rendering.Systems
             for (int c = 0; c < chunks.Length; c++)
             {
                 Chunk chunk = chunks[c];
-                Definition definition = chunk.Definition;
-                if (definition.ContainsComponent(viewportType) && !definition.IsDisabled)
+                if (chunk.componentTypes.Contains(viewportType) && !chunk.IsDisabled)
                 {
                     ReadOnlySpan<uint> viewportEntities = chunk.Entities;
                     ComponentEnumerator<IsViewport> viewportComponents = chunk.GetComponents<IsViewport>(viewportType);
@@ -353,7 +352,7 @@ namespace Rendering.Systems
             for (int c = 0; c < chunks.Length; c++)
             {
                 Chunk chunk = chunks[c];
-                if (chunk.Definition.ContainsComponent(pluginType))
+                if (chunk.componentTypes.Contains(pluginType))
                 {
                     int count = chunk.Count;
                     ComponentEnumerator<RenderEnginePluginFunction> components = chunk.GetComponents<RenderEnginePluginFunction>(pluginType);

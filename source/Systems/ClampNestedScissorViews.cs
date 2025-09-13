@@ -84,8 +84,7 @@ namespace Rendering.Systems
                 Chunk chunk = chunks[c];
                 if (chunk.Count > 0)
                 {
-                    Definition definition = chunk.Definition;
-                    if (definition.ContainsComponent(localScissorType) && !definition.ContainsComponent(worldScissorType))
+                    if (chunk.componentTypes.Contains(localScissorType) && !chunk.componentTypes.Contains(worldScissorType))
                     {
                         operation.AppendMultipleEntitiesToSelection(chunk.Entities);
                     }
@@ -105,7 +104,7 @@ namespace Rendering.Systems
             for (int c = 0; c < chunks.Length; c++)
             {
                 Chunk chunk = chunks[c];
-                if (chunk.Definition.ContainsComponent(localScissorType))
+                if (chunk.componentTypes.Contains(localScissorType))
                 {
                     ReadOnlySpan<uint> entities = chunk.Entities;
                     ComponentEnumerator<RendererScissor> components = chunk.GetComponents<RendererScissor>(localScissorType);
@@ -174,7 +173,7 @@ namespace Rendering.Systems
             for (int c = 0; c < chunks.Length; c++)
             {
                 Chunk chunk = chunks[c];
-                if (chunk.Definition.ContainsComponent(worldScissorType))
+                if (chunk.componentTypes.Contains(worldScissorType))
                 {
                     ReadOnlySpan<uint> entities = chunk.Entities;
                     ComponentEnumerator<WorldRendererScissor> components = chunk.GetComponents<WorldRendererScissor>(worldScissorType);
