@@ -8,6 +8,7 @@
     <IsAotCompatible>True</IsAotCompatible>
     <IsTrimmable>True</IsTrimmable>
     <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
+    <CheckForOverflowUnderflow>false</CheckForOverflowUnderflow>
     <Title>Rendering Systems</Title>
     <Authors>popcron</Authors>
     <Company>simulation-tree</Company>

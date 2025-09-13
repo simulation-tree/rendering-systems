@@ -55,7 +55,13 @@ namespace Rendering
 
         public readonly override int GetHashCode()
         {
-            return HashCode.Combine(flags, renderer, material, shader, mesh);
+            int hash = 17;
+            hash = hash * 31 + flags.GetHashCode();
+            hash = hash * 31 + renderer.GetHashCode();
+            hash = hash * 31 + material.GetHashCode();
+            hash = hash * 31 + shader.GetHashCode();
+            hash = hash * 31 + mesh.GetHashCode();
+            return hash;
         }
 
         public static bool operator ==(EntityComponents left, EntityComponents right)
