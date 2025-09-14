@@ -12,6 +12,7 @@
     <Company>simulation-tree</Company>
     <RepositoryUrl>https://github.com/simulation-tree/rendering-systems</RepositoryUrl>
     <PackageId>SimulationTree.Rendering.Systems.Generator</PackageId>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
   </PropertyGroup>
 
   <ItemGroup>
