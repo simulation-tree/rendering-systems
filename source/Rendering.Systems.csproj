@@ -11,7 +11,7 @@
     <CheckForOverflowUnderflow>false</CheckForOverflowUnderflow>
     <Title>Rendering Systems</Title>
     <Authors>popcron</Authors>
-    <Company>simulation-tree</Company>
+    <Company>Simulation Tree</Company>
     <RepositoryUrl>https://github.com/simulation-tree/rendering-systems</RepositoryUrl>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <IncludeBuildOutput>false</IncludeBuildOutput>
